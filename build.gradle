@@ -1,0 +1,28 @@
+group 'org.kanjivg'
+version '0.1-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '1.0.2'
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'kotlin'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Kotlin
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    // Logging
+    compile 'org.codehaus.groovy:groovy-all:2.4.0'
+    compile 'ch.qos.logback:logback-classic:1.1.7'
+    // Config
+    compile 'com.typesafe:config:1.3.0'
+}
