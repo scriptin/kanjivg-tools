@@ -4,6 +4,7 @@ import java.util.*
 import javax.xml.namespace.QName
 import javax.xml.stream.XMLEventReader
 import javax.xml.stream.events.Attribute
+import javax.xml.stream.events.Characters
 import javax.xml.stream.events.StartElement
 import javax.xml.stream.events.XMLEvent
 
@@ -14,12 +15,14 @@ object KanjiSVGParser {
 
     private val TAG_SVG = QName(SVG_NS, "svg")
     private val TAG_GROUP = QName(SVG_NS, "g")
+    private val TAG_TEXT = QName(SVG_NS, "text")
 
     private val ATTR_ID = QName("id")
     private val ATTR_WIDTH = QName(SVG_NS, "width")
     private val ATTR_HEIGHT = QName(SVG_NS, "height")
     private val ATTR_VIEW_BOX = QName(SVG_NS, "viewBox")
     private val ATTR_STYLE = QName(SVG_NS, "style")
+    private val ATTR_TRANSFORM = QName(SVG_NS, "transform")
 
     fun parse(eventReader: XMLEventReader): KVGTag.SVG {
         skip(eventReader, XMLEvent.START_DOCUMENT, XMLEvent.SPACE) // <?xml ...
@@ -40,28 +43,66 @@ object KanjiSVGParser {
         }
     }
 
-    private fun openTag(name: QName, description: String, eventReader: XMLEventReader): StartElement {
+    private fun skipSpace(eventReader: XMLEventReader): Unit {
+        skip(eventReader, XMLEvent.SPACE)
+    }
+
+    private fun nextEvent(eventReader: XMLEventReader): XMLEvent {
         try {
-            val event = eventReader.nextEvent()
-            if ( ! event.isStartElement) {
-                throw ParsingException.MissingOpenTagException(name, description, event)
-            } else if (event.asStartElement().name != name) {
-                throw ParsingException.UnexpectedOpenTagException(name, description, event.asStartElement())
-            } else {
-                return event.asStartElement()
-            }
+            return eventReader.nextEvent()
         } catch (e: NoSuchElementException) {
             throw ParsingException.UnexpectedEndOfDocumentException(e)
         }
     }
 
+    private fun openTag(name: QName, description: String, eventReader: XMLEventReader): StartElement {
+        val event = nextEvent(eventReader)
+        if ( ! event.isStartElement) {
+            throw ParsingException.MissingOpenTagException(name, description, event)
+        } else if (event.asStartElement().name != name) {
+            throw ParsingException.UnexpectedOpenTagException(name, description, event.asStartElement())
+        } else {
+            return event.asStartElement()
+        }
+    }
+
     private fun closeTag(name: QName, description: String, eventReader: XMLEventReader): Unit {
-        val event = eventReader.nextEvent()
+        val event = nextEvent(eventReader)
         if ( ! event.isEndElement) {
             throw ParsingException.MissingCloseTagException(name, description, event)
         } else if (event.asEndElement().name != TAG_SVG) {
             throw ParsingException.UnexpectedCloseTagException(name, description, event.asEndElement())
         }
+    }
+
+    private fun <E> childrenList(extractor: (XMLEventReader) -> E?, eventReader: XMLEventReader): List<E> {
+        val result = mutableListOf<E>()
+        while (eventReader.hasNext()) {
+            skipSpace(eventReader)
+            result.add(extractor(eventReader) ?: break)
+        }
+        return result.toList()
+    }
+
+    private fun <E> nonEmptyChildrenList(
+        parentTag: StartElement,
+        childTagName: QName,
+        extractor: (XMLEventReader) -> E?,
+        eventReader: XMLEventReader
+    ): List<E> {
+        val result = childrenList(extractor, eventReader)
+        if (result.isEmpty()) {
+            throw ParsingException.EmptyChildrenListException(parentTag, childTagName)
+        }
+        return result
+    }
+
+    private fun characters(parentTag: StartElement, eventReader: XMLEventReader): Characters {
+        val event = nextEvent(eventReader)
+        if ( ! event.isCharacters || event.asCharacters().isCData || event.asCharacters().isIgnorableWhiteSpace) {
+            throw ParsingException.MissingCharactersException(parentTag, event)
+        }
+        return event.asCharacters()
     }
 
     private fun requiredAttr(element: StartElement, name: QName): Attribute {
@@ -90,11 +131,11 @@ object KanjiSVGParser {
         val height = height(element)
         val viewBox = viewBox(element)
 
-        skip(eventReader, XMLEvent.SPACE)
+        skipSpace(eventReader)
         val strokePathsGroup = strokePathsGroup(eventReader)
-        skip(eventReader, XMLEvent.SPACE)
+        skipSpace(eventReader)
         val strokeNumbersGroup = strokeNumbersGroup(eventReader)
-        skip(eventReader, XMLEvent.SPACE)
+        skipSpace(eventReader)
 
         closeTag(TAG_SVG, "closing root tag", eventReader)
         return KVGTag.SVG(width, height, viewBox, strokePathsGroup, strokeNumbersGroup)
@@ -113,9 +154,32 @@ object KanjiSVGParser {
         val element = openTag(TAG_GROUP, "stroke numbers group open tag", eventReader)
         val id = id(element)
         val style = style(element)
-        // TODO: get children
+
+        skipSpace(eventReader)
+        val children = nonEmptyChildrenList(element, TAG_TEXT, { strokeNumber(it) }, eventReader)
+        skipSpace(eventReader)
+
         closeTag(TAG_GROUP, "stroke numbers group closing tag", eventReader)
         return KVGTag.StrokeNumbersGroup(id, style, children)
+    }
+
+    private fun strokeNumber(eventReader: XMLEventReader): KVGTag.StrokeNumber? {
+        val element = openTag(TAG_TEXT, "stroke number open tag", eventReader)
+        val transform = transform(element)
+        val number = strokeNumberValue(element, eventReader)
+        closeTag(TAG_TEXT, "stroke number closing tag", eventReader)
+        return KVGTag.StrokeNumber(number, transform)
+    }
+
+    private fun strokeNumberValue(element: StartElement, eventReader: XMLEventReader): Int {
+        val characters = characters(element, eventReader)
+        try {
+            return characters.data.trim().toInt()
+        } catch (e: NumberFormatException) {
+            throw ParsingException.CharactersFormatException(
+                element, characters.data, "expected an integer", e
+            )
+        }
     }
 
     // ATTRIBUTES PARSING:
@@ -178,5 +242,30 @@ object KanjiSVGParser {
             Pair(pair[0], pair[1])
         }.toMap()
         return KVGTag.Attribute.Style(parts)
+    }
+
+    private fun transform(element: StartElement): KVGTag.Attribute.Transform {
+        val attr = requiredAttr(element, ATTR_TRANSFORM)
+        val rawString = attr.value.trim()
+        if ( ! rawString.matches(Regex("^matrix(.*)$"))) {
+            throw ParsingException.AttributeFormatException(element, attr, "expected 'matrix(...)'")
+        }
+        val numbers = rawString.split("(")[1].split(")")[0].trim().split(Regex("[,\\s]+"))
+        if (numbers.size != 6) {
+            throw ParsingException.AttributeFormatException(
+                element, attr,
+                "expected exactly 6 elements inside 'matrix(...)'"
+            )
+        }
+        try {
+            return KVGTag.Attribute.Transform(
+                KVGTag.Attribute.Transform.Matrix(numbers.map { it.toDouble() })
+            )
+        } catch (e: NumberFormatException) {
+            throw ParsingException.AttributeFormatException(
+                element, attr,
+                "expected only numeric values inside 'matrix(...)'"
+            )
+        }
     }
 }

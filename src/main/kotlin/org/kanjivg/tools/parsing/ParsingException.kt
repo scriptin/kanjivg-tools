@@ -23,12 +23,25 @@ sealed class ParsingException : RuntimeException {
         ParsingException("Expected </$expectedTag> ($description), got $unexpectedTag")
 
     class AttributeFormatException(
-        element: StartElement,
+        tag: StartElement,
         attribute: Attribute,
         details: String,
         cause: Throwable? = null // null cause is allowed in RuntimeException
-    ) : ParsingException("Wrong format of an attribute $attribute in tag $element: $details", cause)
+    ) : ParsingException("Wrong format of an attribute $attribute in tag $tag: $details", cause)
 
-    class MissingRequiredAttributeException(element: StartElement, name: QName) :
-        ParsingException("Missing required attribute $name in tag $element")
+    class MissingRequiredAttributeException(tag: StartElement, attributeName: QName) :
+        ParsingException("Missing required attribute $attributeName in tag $tag")
+
+    class EmptyChildrenListException(parentTag: StartElement, expectedChildTag: QName) :
+        ParsingException("Expected at least one child tag <$expectedChildTag> in tag $parentTag")
+
+    class MissingCharactersException(parentTag: StartElement, unexpectedEvent: XMLEvent) :
+        ParsingException("Expected characters inside $parentTag, got $unexpectedEvent")
+
+    class CharactersFormatException(
+        parentTag: StartElement,
+        text: String,
+        details: String,
+        cause: Throwable? = null
+    ) : ParsingException("Wrong format of a text $text in tag $parentTag: $details", cause)
 }

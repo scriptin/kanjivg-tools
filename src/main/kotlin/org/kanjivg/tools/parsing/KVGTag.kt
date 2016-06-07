@@ -48,14 +48,11 @@ sealed class KVGTag(open val name: String) {
     class StrokeNumbersGroup(
         override val id: Attribute.Id,
         val style: Attribute.Style,
-        val children: List<Text>
+        val children: List<StrokeNumber>
     ) : Group(id)
 
-    /** SVG text element, <text>. NB: it's a tag, not a plain text node */
-    class Text(
-        val text: String,
-        val transform: Attribute.Transform
-    ) : KVGTag("text")
+    /** SVG <text> element with a stroke number */
+    class StrokeNumber(val value: Int, val transform: Attribute.Transform) : KVGTag("text")
 
     /** Attributes of SVG tags */
     sealed class Attribute(open val name: String) {
@@ -69,7 +66,7 @@ sealed class KVGTag(open val name: String) {
         class ViewBox(val x: Int, val y: Int, val width: Int, val height: Int) : Attribute("viewBox")
 
         class Transform(val matrix: Matrix) : Attribute("transform") {
-            class Matrix(val elements: List<Number>)
+            class Matrix(val elements: List<Double>)
         }
 
         class Style(val attributes: Map<String, String>) : Attribute("style")
