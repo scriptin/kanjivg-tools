@@ -17,10 +17,10 @@ sealed class KVGTag(open val name: String) {
     class StrokePathsGroup(
         override val id: Attribute.Id,
         val style: Attribute.Style,
-        val children: List<StrokePathsGroupChild>
+        val rootGroup: StrokePathsSubGroup
     ) : Group(id)
 
-    interface StrokePathsGroupChild
+    interface StrokePathsSubGroupChild
 
     class StrokePathsSubGroup(
         override val id: Attribute.Id,
@@ -35,15 +35,15 @@ sealed class KVGTag(open val name: String) {
         val phon: Attribute.KvgPhon?,
         val tradForm: Attribute.KvgTradForm?,
         val radicalForm: Attribute.KvgRadicalForm?,
-        val children: List<StrokePathsGroupChild>
-    ) : Group(id), StrokePathsGroupChild
+        val children: List<StrokePathsSubGroupChild>
+    ) : Group(id), StrokePathsSubGroupChild
 
     /** SVG path element, <path> */
     class Path(
         val id: Attribute.Id,
         val type: Attribute.KvgType,
         val path: String // TODO: add proper type, aware of SVG path string format
-    ) : KVGTag("path"), StrokePathsGroupChild
+    ) : KVGTag("path"), StrokePathsSubGroupChild
 
     class StrokeNumbersGroup(
         override val id: Attribute.Id,
