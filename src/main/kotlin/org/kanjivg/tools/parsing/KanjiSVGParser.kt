@@ -49,20 +49,21 @@ object KanjiSVGParser {
     // UTILITY METHODS:
 
     private fun XMLEventReader.skip(vararg eventsToSkip: Int) {
-        while (this.hasNext()) {
-            if (eventsToSkip.contains(this.peek().eventType)) {
-                this.nextEvent()
+        if (eventsToSkip.isEmpty()) return
+        while (hasNext()) {
+            if (eventsToSkip.contains(peek().eventType)) {
+                nextEvent()
             } else {
                 break
             }
         }
     }
 
-    private fun XMLEventReader.skipSpace() = this.skip(XMLEvent.SPACE)
+    private fun XMLEventReader.skipSpace() = skip(XMLEvent.SPACE)
 
     private fun <E : XMLEvent> XMLEventReader.nextAs(clazz: Class<E>): E {
         try {
-            val event = this.nextEvent() ?: throw NullPointerException("nextEvent() returned null")
+            val event = nextEvent() ?: throw NullPointerException("nextEvent() returned null")
             if ( ! clazz.isInstance(event)) {
                 throw ParsingException.UnexpectedEvent(clazz, event)
             }
@@ -74,42 +75,47 @@ object KanjiSVGParser {
     }
 
     private fun XMLEventReader.openTag(name: QName, description: String): StartElement {
-        val event = this.nextAs(StartElement::class.java)
+        skipSpace()
+        val event = nextAs(StartElement::class.java)
         if (event.asStartElement().name != name) {
             throw ParsingException.UnexpectedOpeningTag(name, description, event.asStartElement())
         }
+        skipSpace()
         return event
     }
 
     private fun XMLEventReader.closeTag(name: QName, description: String): Unit {
-        val event = this.nextAs(EndElement::class.java)
+        skipSpace()
+        val event = nextAs(EndElement::class.java)
         if (event.asEndElement().name != TAG_SVG) {
             throw ParsingException.UnexpectedClosingTag(name, description, event.asEndElement())
         }
+        skipSpace()
     }
 
     private fun <T> XMLEventReader.tag(name: QName, description: String, convert: (StartElement) -> T): T {
-        val tag = this.openTag(name, description)
+        val tag = openTag(name, description)
         val result = convert(tag)
-        this.closeTag(name, description)
+        closeTag(name, description)
         return result
     }
 
-    private fun <E : KVGTag> XMLEventReader.tagList(extractor: (XMLEventReader) -> E?): List<E> {
-        val result = mutableListOf<E>()
-        while (this.hasNext()) {
-            this.skipSpace()
+    private fun <T : KVGTag> XMLEventReader.tagList(extractor: (XMLEventReader) -> T?): List<T> {
+        val result = mutableListOf<T>()
+        while (hasNext()) {
+            skipSpace()
             result.add(extractor(this) ?: break)
         }
+        skipSpace()
         return result.toList()
     }
 
-    private fun <E : KVGTag> XMLEventReader.nonEmptyTagList(
+    private fun <T : KVGTag> XMLEventReader.nonEmptyTagList(
         parentTag: StartElement,
         childTagName: QName,
-        extractor: (XMLEventReader) -> E?
-    ): List<E> {
-        val result = this.tagList(extractor)
+        extractor: (XMLEventReader) -> T?
+    ): List<T> {
+        val result = tagList(extractor)
         if (result.isEmpty()) {
             throw ParsingException.EmptyChildrenList(parentTag, childTagName)
         }
@@ -117,7 +123,7 @@ object KanjiSVGParser {
     }
 
     private fun XMLEventReader.characters(parentTag: StartElement): Characters {
-        val event = this.nextAs(Characters::class.java)
+        val event = nextAs(Characters::class.java)
         if (event.isCData || event.isIgnorableWhiteSpace) {
             throw ParsingException.MissingCharacters(parentTag, event)
         }
@@ -125,13 +131,22 @@ object KanjiSVGParser {
     }
 
     private fun StartElement.requiredAttr(name: QName): Attribute {
-        return this.getAttributeByName(name) ?:
+        return getAttributeByName(name) ?:
             throw ParsingException.MissingRequiredAttribute(this, name)
     }
 
+    private fun StartElement.attrString(name: QName): String? = getAttributeByName(name)?.value
+
+    private fun StartElement.attrInt(name: QName): Int? = getAttributeByName(name)?.toInt(this)
+
+    private fun StartElement.attrBoolean(name: QName): Boolean? = getAttributeByName(name)?.toBoolean(this)
+
+    private fun <E : Enum<E>> StartElement.attrEnum(name: QName, enumClass: Class<E>): E? =
+        getAttributeByName(name)?.toEnum(this, enumClass)
+
     private fun Attribute.toInt(context: StartElement): Int {
         try {
-            return this.value.toInt()
+            return value.toInt()
         } catch (e: NumberFormatException) {
             throw ParsingException.InvalidAttributeFormat(context, this, "expected integer", e)
         }
@@ -139,19 +154,19 @@ object KanjiSVGParser {
 
     private fun Attribute.toBoolean(context: StartElement): Boolean {
         try {
-            return this.value.toBoolean()
+            return value.toBoolean()
         } catch (e: Exception) {
             throw ParsingException.InvalidAttributeFormat(context, this, "expected boolean", e)
         }
     }
 
-    private fun <E : Enum<E>> Attribute.toEnum(context: StartElement, enumClass: Class<E>, values: Array<E>): E {
+    private fun <E : Enum<E>> Attribute.toEnum(context: StartElement, enumClass: Class<E>): E {
         try {
-            return java.lang.Enum.valueOf(enumClass, this.value)
+            return java.lang.Enum.valueOf(enumClass, value)
         } catch (e: Exception) {
             throw ParsingException.InvalidAttributeFormat(
                 context, this,
-                "expected one of these enum values: $values", e
+                "expected one of these enum values: ${enumClass.enumConstants}", e
             )
         }
     }
@@ -160,104 +175,62 @@ object KanjiSVGParser {
 
     private fun svg(eventReader: XMLEventReader): KVGTag.SVG {
         return eventReader.tag(TAG_SVG, "root tag") { tag ->
-            val width = width(tag)
-            val height = height(tag)
-            val viewBox = viewBox(tag)
-            eventReader.skipSpace()
-            val strokePathsGroup = strokePathsGroup(eventReader)
-            eventReader.skipSpace()
-            val strokeNumbersGroup = strokeNumbersGroup(eventReader)
-            eventReader.skipSpace()
-            KVGTag.SVG(width, height, viewBox, strokePathsGroup, strokeNumbersGroup)
+            KVGTag.SVG(
+                width = Attr.Width(tag.requiredAttr(ATTR_WIDTH).toInt(tag)),
+                height = Attr.Height(tag.requiredAttr(ATTR_HEIGHT).toInt(tag)),
+                viewBox = viewBox(tag),
+                strokePathsGroup = strokePathsGroup(eventReader),
+                strokeNumbersGroup = strokeNumbersGroup(eventReader)
+            )
         }
     }
 
     private fun strokePathsGroup(eventReader: XMLEventReader): KVGTag.StrokePathsGroup {
         return eventReader.tag(TAG_GROUP, "stroke paths group") { tag ->
-            val id = id(tag)
-            val style = style(tag)
-            eventReader.skipSpace()
-            val rootGroup = strokeGroup(eventReader)
-            eventReader.skipSpace()
-            KVGTag.StrokePathsGroup(id, style, rootGroup)
+            KVGTag.StrokePathsGroup(
+                id = id(tag),
+                style = style(tag),
+                rootGroup = strokeGroup(eventReader)
+            )
         }
     }
 
     private fun strokeGroup(eventReader: XMLEventReader): KVGTag.StrokePathsSubGroup {
         return eventReader.tag(TAG_GROUP, "stroke group") { tag ->
-            val id = id(tag)
-            val element = tag.getAttributeByName(ATTR_ELEMENT)
-                ?.value
-                ?.let { Attr.KvgElement(it) }
-            val original = tag.getAttributeByName(ATTR_ORIGINAL)
-                ?.value
-                ?.let { Attr.KvgOriginal(it) }
-            val position = tag.getAttributeByName(ATTR_POSITION)
-                ?.toEnum(tag, Attr.Position::class.java, Attr.Position.values())
-                ?.let { Attr.KvgPosition(it) }
-            val variant = tag.getAttributeByName(ATTR_VARIANT)
-                ?.toBoolean(tag)
-                ?.let { Attr.KvgVariant(it) }
-            val partial = tag.getAttributeByName(ATTR_PARTIAL)
-                ?.toBoolean(tag)
-                ?.let { Attr.KvgPartial(it) }
-            val part = tag.getAttributeByName(ATTR_PART)
-                ?.toInt(tag)
-                ?.let { Attr.KvgPart(it) }
-            val number = tag.getAttributeByName(ATTR_NUMBER)
-                ?.toInt(tag)
-                ?.let { Attr.KvgNumber(it) }
-            val radical = tag.getAttributeByName(ATTR_RADICAL)
-                ?.toEnum(tag, Attr.Radical::class.java, Attr.Radical.values())
-                ?.let { Attr.KvgRadical(it) }
-            val phon = tag.getAttributeByName(ATTR_PHON)
-                ?.value
-                ?.let { Attr.KvgPhon(it) }
-            val tradForm = tag.getAttributeByName(ATTR_TRAD_FORM)
-                ?.value
-                ?.let { Attr.KvgTradForm(it) }
-            val radicalForm = tag.getAttributeByName(ATTR_RADICAL_FORM)
-                ?.value
-                ?.let { Attr.KvgRadicalForm(it) }
-
-            eventReader.skipSpace()
-            // val children = listOf<KVGTag.StrokePathsSubGroupChild>() // TODO
-            eventReader.skipSpace()
-
             KVGTag.StrokePathsSubGroup(
-                id = id,
-                element = element,
-                original = original,
-                position = position,
-                variant = variant,
-                partial = partial,
-                part = part,
-                number = number,
-                radical = radical,
-                phon = phon,
-                tradForm = tradForm,
-                radicalForm = radicalForm,
-                children = children
+                id = id(tag),
+                element = tag.attrString(ATTR_ELEMENT)?.let { Attr.KvgElement(it) },
+                original = tag.attrString(ATTR_ORIGINAL)?.let { Attr.KvgOriginal(it) },
+                position = tag.attrEnum(ATTR_POSITION, Attr.Position::class.java)?.let { Attr.KvgPosition(it) },
+                variant = tag.attrBoolean(ATTR_VARIANT)?.let { Attr.KvgVariant(it) },
+                partial = tag.attrBoolean(ATTR_PARTIAL)?.let { Attr.KvgPartial(it) },
+                part = tag.attrInt(ATTR_PART)?.let { Attr.KvgPart(it) },
+                number = tag.attrInt(ATTR_NUMBER)?.let { Attr.KvgNumber(it) },
+                radical = tag.attrEnum(ATTR_RADICAL, Attr.Radical::class.java)?.let { Attr.KvgRadical(it) },
+                phon = tag.attrString(ATTR_PHON)?.let { Attr.KvgPhon(it) },
+                tradForm = tag.attrString(ATTR_TRAD_FORM)?.let { Attr.KvgTradForm(it) },
+                radicalForm = tag.attrString(ATTR_RADICAL_FORM)?.let { Attr.KvgRadicalForm(it) },
+                children = null // TODO
             )
         }
     }
 
     private fun strokeNumbersGroup(eventReader: XMLEventReader): KVGTag.StrokeNumbersGroup {
         return eventReader.tag(TAG_GROUP, "stroke numbers group") { tag ->
-            val id = id(tag)
-            val style = style(tag)
-            eventReader.skipSpace()
-            val children = eventReader.nonEmptyTagList(tag, TAG_TEXT, { strokeNumber(it) })
-            eventReader.skipSpace()
-            KVGTag.StrokeNumbersGroup(id, style, children)
+            KVGTag.StrokeNumbersGroup(
+                id = id(tag),
+                style = style(tag),
+                children = eventReader.nonEmptyTagList(tag, TAG_TEXT, { strokeNumber(it) })
+            )
         }
     }
 
     private fun strokeNumber(eventReader: XMLEventReader): KVGTag.StrokeNumber? {
         return eventReader.tag(TAG_TEXT, "stroke number") { tag ->
-            val transform = transform(tag)
-            val number = strokeNumberValue(tag, eventReader)
-            KVGTag.StrokeNumber(number, transform)
+            KVGTag.StrokeNumber(
+                transform = transform(tag),
+                value = strokeNumberValue(tag, eventReader)
+            )
         }
     }
 
@@ -274,11 +247,7 @@ object KanjiSVGParser {
 
     // ATTRIBUTES PARSING:
 
-    private fun width(tag: StartElement): Attr.Width =
-        Attr.Width(tag.requiredAttr(ATTR_WIDTH).toInt(tag))
-
-    private fun height(tag: StartElement): Attr.Height =
-        Attr.Height(tag.requiredAttr(ATTR_HEIGHT).toInt(tag))
+    private fun id(element: StartElement): Attr.Id = Attr.Id(element.requiredAttr(ATTR_ID).value)
 
     private fun viewBox(tag: StartElement): Attr.ViewBox {
         val attr = tag.requiredAttr(ATTR_VIEW_BOX)
@@ -313,10 +282,6 @@ object KanjiSVGParser {
                 e.message ?: "invalid number format", e
             )
         }
-    }
-
-    private fun id(element: StartElement): Attr.Id {
-        return Attr.Id(element.requiredAttr(ATTR_ID).value)
     }
 
     private fun style(element: StartElement): Attr.Style {

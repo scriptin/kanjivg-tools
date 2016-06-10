@@ -52,7 +52,7 @@ sealed class KVGTag(open val name: String) {
     ) : Group(id)
 
     /** SVG <text> element with a stroke number */
-    class StrokeNumber(val value: Int, val transform: Attribute.Transform) : KVGTag("text")
+    class StrokeNumber(val transform: Attribute.Transform, val value: Int) : KVGTag("text")
 
     /** Attributes of SVG tags */
     sealed class Attribute(open val name: String) {
