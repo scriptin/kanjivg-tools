@@ -12,11 +12,19 @@ sealed class ParsingException : RuntimeException {
 
     class UnexpectedEndOfDocument(cause: Throwable) : ParsingException("Unexpected end of document", cause)
 
-    class UnexpectedEvent(expectedEventType: Class<*>, unexpectedEvent: XMLEvent) :
-        ParsingException("Expected event of type ${expectedEventType.simpleName}, got $unexpectedEvent")
+    class UnexpectedEvent : ParsingException {
+        constructor(expectedEventType: Class<*>, unexpectedEvent: XMLEvent) :
+            super("Expected event of type ${expectedEventType.simpleName}, got $unexpectedEvent")
+        constructor(expectedEventTypes: List<Class<*>>, unexpectedEvent: XMLEvent) :
+            super("Expected one of these event types: ${expectedEventTypes.map { it.simpleName }}, got $unexpectedEvent")
+    }
 
-    class UnexpectedOpeningTag(expectedTag: QName, description: String, unexpectedTag: StartElement) :
-        ParsingException("Expected opening tag <$expectedTag> ($description), got $unexpectedTag")
+    class UnexpectedOpeningTag : ParsingException {
+        constructor(expectedTag: QName, description: String, unexpectedTag: StartElement) :
+            super("Expected opening tag <$expectedTag> ($description), got $unexpectedTag")
+        constructor(expectedTags: List<QName>, description: String, unexpectedTag: StartElement) :
+            super("Expected opening tag ${expectedTags.map { "<$it>" }} ($description), got $unexpectedTag")
+    }
     class UnexpectedClosingTag(expectedTag: QName, description: String, unexpectedTag: EndElement) :
         ParsingException("Expected closing tag </$expectedTag> ($description), got $unexpectedTag")
 

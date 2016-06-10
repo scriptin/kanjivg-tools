@@ -42,7 +42,7 @@ sealed class KVGTag(open val name: String) {
     class Path(
         val id: Attribute.Id,
         val type: Attribute.KvgType,
-        val path: String // TODO: add proper type, aware of SVG path string format
+        val path: Attribute.Path
     ) : KVGTag("path"), StrokePathsSubGroupChild
 
     class StrokeNumbersGroup(
@@ -70,6 +70,9 @@ sealed class KVGTag(open val name: String) {
         }
 
         class Style(val attributes: Map<String, String>) : Attribute("style")
+
+        // TODO: add proper type, aware of SVG path string format
+        class Path(val value: String) : Attribute("d")
 
         /** KanjiVG-specific attributes, prefixed with "kvg:" */
         abstract class KvgAttribute(override val name: String) : Attribute("kvg:" + name)

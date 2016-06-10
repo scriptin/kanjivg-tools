@@ -23,6 +23,7 @@ object KanjiSVGParser {
     private val ATTR_VIEW_BOX = QName(SVG_NS, "viewBox")
     private val ATTR_STYLE = QName(SVG_NS, "style")
     private val ATTR_TRANSFORM = QName(SVG_NS, "transform")
+    private val ATTR_PATH = QName(SVG_NS, "d")
 
     private val ATTR_ELEMENT = QName(KVG_NS, "element", KVG_PREFIX)
     private val ATTR_ORIGINAL = QName(KVG_NS, "original", KVG_PREFIX)
@@ -35,6 +36,7 @@ object KanjiSVGParser {
     private val ATTR_PHON = QName(KVG_NS, "phon", KVG_PREFIX)
     private val ATTR_TRAD_FORM = QName(KVG_NS, "tradForm", KVG_PREFIX)
     private val ATTR_RADICAL_FORM = QName(KVG_NS, "radicalForm", KVG_PREFIX)
+    private val ATTR_TYPE = QName(KVG_NS, "type", KVG_PREFIX)
 
     fun parse(eventReader: XMLEventReader): KVGTag.SVG {
         eventReader.skip(
@@ -120,6 +122,24 @@ object KanjiSVGParser {
             throw ParsingException.EmptyChildrenList(parentTag, childTagName)
         }
         return result
+    }
+
+    private fun <T> XMLEventReader.tagList(parser: (StartElement, XMLEventReader) -> T): List<T> {
+        val result = mutableListOf<T>()
+        loop@ while (hasNext()) {
+            skipSpace()
+            val nextEvent = peek()
+            when (nextEvent) {
+                is EndElement -> break@loop
+                is StartElement -> parser(nextEvent, this)
+                else -> throw ParsingException.UnexpectedEvent(
+                    listOf(StartElement::class.java, EndElement::class.java),
+                    nextEvent
+                )
+            }
+        }
+        skipSpace()
+        return result.toList()
     }
 
     private fun XMLEventReader.characters(parentTag: StartElement): Characters {
@@ -210,7 +230,25 @@ object KanjiSVGParser {
                 phon = tag.attrString(ATTR_PHON)?.let { Attr.KvgPhon(it) },
                 tradForm = tag.attrString(ATTR_TRAD_FORM)?.let { Attr.KvgTradForm(it) },
                 radicalForm = tag.attrString(ATTR_RADICAL_FORM)?.let { Attr.KvgRadicalForm(it) },
-                children = null // TODO
+                children = eventReader.tagList<KVGTag.StrokePathsSubGroupChild> { tag, eventReader ->
+                    when (tag.name) {
+                        TAG_GROUP -> strokeGroup(eventReader)
+                        TAG_PATH -> stroke(eventReader)
+                        else -> throw ParsingException.UnexpectedOpeningTag(
+                            listOf(TAG_GROUP, TAG_PATH), "stroke group or stroke", tag
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    private fun stroke(eventReader: XMLEventReader): KVGTag.Path {
+        return eventReader.tag(TAG_PATH, "stroke path") { tag ->
+            KVGTag.Path(
+                id = id(tag),
+                type = Attr.KvgType(tag.requiredAttr(ATTR_TYPE).value),
+                path = Attr.Path(tag.requiredAttr(ATTR_PATH).value)
             )
         }
     }
