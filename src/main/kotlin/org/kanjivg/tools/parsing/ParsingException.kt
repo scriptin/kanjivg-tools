@@ -12,11 +12,29 @@ sealed class ParsingException : RuntimeException {
 
     class UnexpectedEndOfDocument(cause: Throwable) : ParsingException("Unexpected end of document", cause)
 
+    companion object {
+        private fun replaceWS(s: String): String {
+            return s.replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+        }
+
+        protected fun show(event: XMLEvent): String {
+            return when (event.eventType) {
+                XMLEvent.SPACE -> "[whitespace]"
+                XMLEvent.CHARACTERS -> "[characters:'${replaceWS(event.asCharacters().data)}']"
+                else -> event.toString()
+            }
+        }
+    }
+
     class UnexpectedEvent : ParsingException {
         constructor(expectedEventType: Class<*>, unexpectedEvent: XMLEvent) :
-            super("Expected event of type ${expectedEventType.simpleName}, got $unexpectedEvent")
+            super("Expected event of type ${expectedEventType.simpleName}, " +
+                "got ${show(unexpectedEvent)}")
         constructor(expectedEventTypes: List<Class<*>>, unexpectedEvent: XMLEvent) :
-            super("Expected one of these event types: ${expectedEventTypes.map { it.simpleName }}, got $unexpectedEvent")
+            super("Expected one of these event types: ${expectedEventTypes.map { it.simpleName }}, " +
+                "got ${show(unexpectedEvent)}")
     }
 
     class UnexpectedOpeningTag : ParsingException {
@@ -33,10 +51,10 @@ sealed class ParsingException : RuntimeException {
         attribute: Attribute,
         details: String,
         cause: Throwable? = null
-    ) : ParsingException("Invalid format of an attribute $attribute in tag $tag: $details", cause)
+    ) : ParsingException("Invalid format of an attribute '$attribute' in tag $tag: $details", cause)
 
     class MissingRequiredAttribute(tag: StartElement, attributeName: QName) :
-        ParsingException("Missing required attribute $attributeName in tag $tag")
+        ParsingException("Missing required attribute '$attributeName' in tag $tag")
 
     class EmptyChildrenList(parentTag: StartElement, expectedChildTag: QName) :
         ParsingException("Expected at least one child tag <$expectedChildTag> in tag $parentTag")

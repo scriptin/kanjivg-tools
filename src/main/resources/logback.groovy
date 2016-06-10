@@ -9,6 +9,6 @@ appender("STDOUT", ConsoleAppender) {
     }
 }
 
-logger("org.kanjivg.tools", INFO)
+logger("org.kanjivg.tools", DEBUG)
 
 root(WARN, ["STDOUT"])

@@ -29,12 +29,12 @@ class Tools(final val config: Config) {
                 val kanjiCode = file.nameWithoutExtension
                 logger.info("PARSING START: {}", file.name)
                 val svg = KanjiSVGParser.parse(xmlInputFactory.createXMLEventReader(FileReader(file)))
-                logger.info("PARSING END: {}", file.name)
+                logger.info("PARSING SUCCESSFUL: {}", file.name)
             } catch (e: ParsingException) {
-                logger.error("PARSING FAILED: {}: ${e.message}")
+                logger.error("PARSING FAILED: {}\n{}", file.name, e.message)
                 logger.debug("Stack trace:", e)
             } catch (e: Throwable) {
-                logger.error("UNHANDLED ERROR:", e)
+                logger.error("UNHANDLED ERROR: {}", file.name, e)
             } finally {
                 logger.info("END: {}", file.name)
             }

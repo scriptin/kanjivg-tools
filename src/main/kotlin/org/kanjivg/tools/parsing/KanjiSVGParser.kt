@@ -18,12 +18,12 @@ object KanjiSVGParser {
     private val TAG_TEXT = QName(SVG_NS, "text")
 
     private val ATTR_ID = QName("id")
-    private val ATTR_WIDTH = QName(SVG_NS, "width")
-    private val ATTR_HEIGHT = QName(SVG_NS, "height")
-    private val ATTR_VIEW_BOX = QName(SVG_NS, "viewBox")
-    private val ATTR_STYLE = QName(SVG_NS, "style")
-    private val ATTR_TRANSFORM = QName(SVG_NS, "transform")
-    private val ATTR_PATH = QName(SVG_NS, "d")
+    private val ATTR_WIDTH = QName("width")
+    private val ATTR_HEIGHT = QName("height")
+    private val ATTR_VIEW_BOX = QName("viewBox")
+    private val ATTR_STYLE = QName("style")
+    private val ATTR_TRANSFORM = QName("transform")
+    private val ATTR_PATH = QName("d")
 
     private val ATTR_ELEMENT = QName(KVG_NS, "element", KVG_PREFIX)
     private val ATTR_ORIGINAL = QName(KVG_NS, "original", KVG_PREFIX)
@@ -61,7 +61,16 @@ object KanjiSVGParser {
         }
     }
 
-    private fun XMLEventReader.skipSpace() = skip(XMLEvent.SPACE)
+    private fun XMLEventReader.skipSpace() {
+        loop@ while (hasNext()) {
+            val event = peek()
+            when (event.eventType) {
+                XMLEvent.SPACE -> nextEvent()
+                XMLEvent.CHARACTERS -> if (event.asCharacters().data.replace(Regex("\\s"), "").isBlank()) nextEvent()
+                else -> break@loop
+            }
+        }
+    }
 
     private fun <E : XMLEvent> XMLEventReader.nextAs(clazz: Class<E>): E {
         try {
