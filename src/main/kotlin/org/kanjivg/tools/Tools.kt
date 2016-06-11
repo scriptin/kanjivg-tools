@@ -40,8 +40,8 @@ class Tools(final val config: Config) {
                     logger.info("ALL VALIDATIONS PASSED: {}", file.name)
                 } else {
                     logger.warn(
-                        "SOME VALIDATIONS FAILED: {}\n{}", file.name,
-                        failedValidations.map { "  ${it.first}: ${it.second}" }.joinToString("\n")
+                        "SOME VALIDATIONS FAILED: {}\n{}\n", file.name,
+                        failedValidations.map { "  - ${it.first}: ${it.second}" }.joinToString("\n")
                     )
                 }
             } catch (e: ParsingException) {
