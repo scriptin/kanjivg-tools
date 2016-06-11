@@ -3,12 +3,16 @@ import ch.qos.logback.core.ConsoleAppender
 
 import static ch.qos.logback.classic.Level.*
 
+def getLogLevel() {
+    valueOf(System.getProperty('log.level')?.toUpperCase()) ?: INFO
+}
+
 appender("STDOUT", ConsoleAppender) {
     encoder(PatternLayoutEncoder) {
         pattern = "%d{HH:mm:ss.SSS} %level - %msg%n%ex"
     }
 }
 
-logger("org.kanjivg.tools", INFO)
+logger("org.kanjivg.tools", getLogLevel())
 
 root(WARN, ["STDOUT"])
