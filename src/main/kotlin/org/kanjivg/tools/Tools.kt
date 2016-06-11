@@ -3,8 +3,7 @@ package org.kanjivg.tools
 import com.typesafe.config.Config
 import org.kanjivg.tools.parsing.KanjiSVGParser
 import org.kanjivg.tools.parsing.ParsingException
-import org.kanjivg.tools.validation.Validation
-import org.kanjivg.tools.validation.ValidationResult
+import org.kanjivg.tools.validation.*
 import org.slf4j.LoggerFactory
 import java.io.*
 import javax.xml.stream.XMLInputFactory
@@ -28,8 +27,12 @@ class Tools(final val config: Config) {
         xmlInputFactory.setXMLResolver { publicID, systemID, baseURI, namespace -> "".byteInputStream() }
 
         val validations = listOf(
-            Validation.WidthAndHeight,
-            Validation.ViewBox
+            WidthAndHeight,
+            ViewBox,
+            StrokeRootGroupId,
+            StrokeRootGroupStyle,
+            NumberRootGroupId,
+            NumberRootGroupStyle
         )
 
         val validationDescriptions = validations.map { "${it.name}: ${it.description}" }
