@@ -23,7 +23,7 @@ abstract class StyleValidation(
         style.keys.forEach { key -> if (requiredStyle[key] == null) extra.add(key) }
         val errors = mutableListOf<String>()
         if (missing.isNotEmpty()) errors.add("missing keys: $missing")
-        if (invalid.isNotEmpty()) errors.add("wrong values: ${invalid.map { key ->
+        if (invalid.isNotEmpty()) errors.add("not equal values: ${invalid.map { key ->
             "$key='${style[key]}' (expected '${requiredStyle[key]}')"
         }}")
         if (extra.isNotEmpty()) errors.add("extra keys: $extra")

@@ -16,6 +16,8 @@ class Tools(final val config: Config) {
         ViewBox,
         StrokeRootGroupId,
         StrokeRootGroupStyle,
+        StrokeGroupsIds,
+        StrokeIds,
         NumberRootGroupId,
         NumberRootGroupStyle
     )
