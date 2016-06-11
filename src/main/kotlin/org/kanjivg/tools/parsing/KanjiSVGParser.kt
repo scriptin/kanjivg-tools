@@ -146,7 +146,7 @@ object KanjiSVGParser {
             val nextEvent = peek()
             when (nextEvent) {
                 is EndElement -> break@loop
-                is StartElement -> parser(nextEvent, this)
+                is StartElement -> result.add(parser(nextEvent, this))
                 else -> throw ParsingException.UnexpectedEvent(
                     listOf(StartElement::class.java, EndElement::class.java),
                     nextEvent,

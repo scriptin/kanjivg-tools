@@ -6,7 +6,7 @@ object StrokeIds : IdsValidation(
     "stroke ids",
     "strokes must have properly set ids, numbered by depth-first traversal order"
 ) {
-    override fun suffix(idx: Int): String = "-s${idx - 1}"
+    override fun suffix(idx: Int): String = "-s${idx + 1}"
 
     override fun getIds(group: KVGTag.StrokePathsSubGroup): List<String> {
         val ids = mutableListOf<String>()
