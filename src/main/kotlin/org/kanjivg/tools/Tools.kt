@@ -3,6 +3,8 @@ package org.kanjivg.tools
 import com.typesafe.config.Config
 import org.kanjivg.tools.parsing.KanjiSVGParser
 import org.kanjivg.tools.parsing.ParsingException
+import org.kanjivg.tools.validation.Validation
+import org.kanjivg.tools.validation.ValidationResult
 import org.slf4j.LoggerFactory
 import java.io.*
 import javax.xml.stream.XMLInputFactory
@@ -25,13 +27,31 @@ class Tools(final val config: Config) {
         // Fetching DTD makes the parsing extremely slow
         xmlInputFactory.setXMLResolver { publicID, systemID, baseURI, namespace -> "".byteInputStream() }
 
+        val validations = listOf(
+            Validation.WidthAndHeight,
+            Validation.ViewBox
+        )
+
+        val validationDescriptions = validations.map { "${it.name}: ${it.description}" }
+        logger.info("Validations:\n  ${validationDescriptions.joinToString("\n  ")}")
+
         files.forEach { file ->
             logger.info("START: {}", file.name)
             val kanjiCode = file.nameWithoutExtension
             val eventReader = xmlInputFactory.createXMLEventReader(FileReader(file))
             try {
                 val svg = KanjiSVGParser.parse(eventReader)
-                logger.info("SUCCESSFUL: {}", file.name)
+                val failedValidations = validations
+                    .map { Pair(it.name, it.validate(kanjiCode, svg)) }
+                    .filter { pair -> pair.second is ValidationResult.Failed }
+                if (failedValidations.isEmpty()) {
+                    logger.info("ALL VALIDATIONS PASSED: {}", file.name)
+                } else {
+                    logger.warn(
+                        "SOME VALIDATIONS FAILED: {}\n{}", file.name,
+                        failedValidations.map { "  ${it.first}: ${it.second}" }.joinToString("\n")
+                    )
+                }
             } catch (e: ParsingException) {
                 logger.error("PARSING FAILED: {}\n{}", file.name, e.message)
                 logger.debug("Stack trace:", e)

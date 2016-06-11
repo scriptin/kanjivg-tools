@@ -1,4 +1,4 @@
-package org.kanjivg.tools.parsing
+package org.kanjivg.tools
 
 /** SVG tags */
 sealed class KVGTag(open val name: String) {

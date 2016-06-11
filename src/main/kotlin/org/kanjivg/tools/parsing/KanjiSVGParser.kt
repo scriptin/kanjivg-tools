@@ -1,11 +1,11 @@
 package org.kanjivg.tools.parsing
 
+import org.kanjivg.tools.KVGTag
 import java.util.*
 import javax.xml.namespace.QName
 import javax.xml.stream.XMLEventReader
 import javax.xml.stream.events.*
-
-import org.kanjivg.tools.parsing.KVGTag.Attribute as Attr
+import org.kanjivg.tools.KVGTag.Attribute as Attr
 
 object KanjiSVGParser {
     private const val SVG_NS = "http://www.w3.org/2000/svg"
