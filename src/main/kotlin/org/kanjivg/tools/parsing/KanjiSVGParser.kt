@@ -12,10 +12,10 @@ object KanjiSVGParser {
     private const val KVG_NS = "http://kanjivg.tagaini.net"
     private const val KVG_PREFIX = "kvg"
 
-    private val TAG_SVG = QName(SVG_NS, "svg")
-    private val TAG_GROUP = QName(SVG_NS, "g")
-    private val TAG_PATH = QName(SVG_NS, "path")
-    private val TAG_TEXT = QName(SVG_NS, "text")
+    private val TAG_SVG = QName("svg")
+    private val TAG_GROUP = QName("g")
+    private val TAG_PATH = QName("path")
+    private val TAG_TEXT = QName("text")
 
     private val ATTR_ID = QName("id")
     private val ATTR_WIDTH = QName("width")
@@ -38,45 +38,50 @@ object KanjiSVGParser {
     private val ATTR_RADICAL_FORM = QName(KVG_NS, "radicalForm", KVG_PREFIX)
     private val ATTR_TYPE = QName(KVG_NS, "type", KVG_PREFIX)
 
+    private val REGEX_MATRIX = Regex("^matrix(.*)$")
+    private val REGEX_COMMA_OR_SPACE = Regex("[,\\s]+")
+    private val REGEX_COLON_OR_SPACE = Regex("[:\\s]+")
+    private val REGEX_SEMICOLON_OR_SPACE = Regex("[;\\s]+")
+
     fun parse(eventReader: XMLEventReader): KVGTag.SVG {
-        eventReader.skip(
+        eventReader.skip(setOf(
             XMLEvent.START_DOCUMENT, // <?xml ...
             XMLEvent.COMMENT, // <!-- Copyright ...
             XMLEvent.DTD, // <!DOCTYPE ...
             XMLEvent.SPACE
-        )
+        ))
         return svg(eventReader)
     }
 
     // UTILITY METHODS:
 
-    private fun XMLEventReader.skip(vararg eventsToSkip: Int) {
+    private fun XMLEventReader.skip(eventsToSkip: Set<Int>) {
         if (eventsToSkip.isEmpty()) return
         while (hasNext()) {
             if (eventsToSkip.contains(peek().eventType)) {
                 nextEvent()
             } else {
-                break
+                return
             }
         }
     }
 
     private fun XMLEventReader.skipSpace() {
-        loop@ while (hasNext()) {
+        while (hasNext()) {
             val event = peek()
             when (event.eventType) {
                 XMLEvent.SPACE -> nextEvent()
-                XMLEvent.CHARACTERS -> if (event.asCharacters().data.replace(Regex("\\s"), "").isBlank()) nextEvent()
-                else -> break@loop
+                XMLEvent.CHARACTERS -> if (event.asCharacters().data.isBlank()) nextEvent() else return
+                else -> return
             }
         }
     }
 
-    private fun <E : XMLEvent> XMLEventReader.nextAs(clazz: Class<E>): E {
+    private fun <E : XMLEvent> XMLEventReader.nextAs(clazz: Class<E>, description: String): E {
         try {
             val event = nextEvent() ?: throw NullPointerException("nextEvent() returned null")
             if ( ! clazz.isInstance(event)) {
-                throw ParsingException.UnexpectedEvent(clazz, event)
+                throw ParsingException.UnexpectedEvent(clazz, event, description)
             }
             @Suppress("UNCHECKED_CAST")
             return event as E
@@ -87,7 +92,7 @@ object KanjiSVGParser {
 
     private fun XMLEventReader.openTag(name: QName, description: String): StartElement {
         skipSpace()
-        val event = nextAs(StartElement::class.java)
+        val event = nextAs(StartElement::class.java, "opening tag <$name>")
         if (event.asStartElement().name != name) {
             throw ParsingException.UnexpectedOpeningTag(name, description, event.asStartElement())
         }
@@ -97,8 +102,8 @@ object KanjiSVGParser {
 
     private fun XMLEventReader.closeTag(name: QName, description: String): Unit {
         skipSpace()
-        val event = nextAs(EndElement::class.java)
-        if (event.asEndElement().name != TAG_SVG) {
+        val event = nextAs(EndElement::class.java, "closing tag </$name>")
+        if (event.asEndElement().name != name) {
             throw ParsingException.UnexpectedClosingTag(name, description, event.asEndElement())
         }
         skipSpace()
@@ -115,6 +120,7 @@ object KanjiSVGParser {
         val result = mutableListOf<T>()
         while (hasNext()) {
             skipSpace()
+            if (peek().isEndElement) break
             result.add(extractor(this) ?: break)
         }
         skipSpace()
@@ -143,7 +149,8 @@ object KanjiSVGParser {
                 is StartElement -> parser(nextEvent, this)
                 else -> throw ParsingException.UnexpectedEvent(
                     listOf(StartElement::class.java, EndElement::class.java),
-                    nextEvent
+                    nextEvent,
+                    "closing parent tag or opening child tag"
                 )
             }
         }
@@ -152,7 +159,7 @@ object KanjiSVGParser {
     }
 
     private fun XMLEventReader.characters(parentTag: StartElement): Characters {
-        val event = nextAs(Characters::class.java)
+        val event = nextAs(Characters::class.java, "characters inside $parentTag")
         if (event.isCData || event.isIgnorableWhiteSpace) {
             throw ParsingException.MissingCharacters(parentTag, event)
         }
@@ -256,7 +263,7 @@ object KanjiSVGParser {
         return eventReader.tag(TAG_PATH, "stroke path") { tag ->
             KVGTag.Path(
                 id = id(tag),
-                type = Attr.KvgType(tag.requiredAttr(ATTR_TYPE).value),
+                type = tag.attrString(ATTR_TYPE)?.let { Attr.KvgType(it) },
                 path = Attr.Path(tag.requiredAttr(ATTR_PATH).value)
             )
         }
@@ -299,7 +306,7 @@ object KanjiSVGParser {
     private fun viewBox(tag: StartElement): Attr.ViewBox {
         val attr = tag.requiredAttr(ATTR_VIEW_BOX)
         try {
-            val parts = attr.value.trim().split(Regex("[,\\s]+"))
+            val parts = attr.value.trim().split(REGEX_COMMA_OR_SPACE)
             if (parts.size != 4) {
                 throw ParsingException.InvalidAttributeFormat(
                     tag, attr,
@@ -333,8 +340,8 @@ object KanjiSVGParser {
 
     private fun style(element: StartElement): Attr.Style {
         val attr = element.requiredAttr(ATTR_STYLE)
-        val parts = attr.value.trim().split(Regex("[;\\s]+")).map { part ->
-            val pair = part.split(Regex("[:\\s]+"))
+        val parts = attr.value.trim().split(REGEX_SEMICOLON_OR_SPACE).filter { ! it.isBlank() }.map { part ->
+            val pair = part.split(REGEX_COLON_OR_SPACE)
             if (pair.size != 2) {
                 throw ParsingException.InvalidAttributeFormat(
                     element, attr,
@@ -349,10 +356,10 @@ object KanjiSVGParser {
     private fun transform(element: StartElement): Attr.Transform {
         val attr = element.requiredAttr(ATTR_TRANSFORM)
         val rawString = attr.value.trim()
-        if ( ! rawString.matches(Regex("^matrix(.*)$"))) {
+        if ( ! rawString.matches(REGEX_MATRIX)) {
             throw ParsingException.InvalidAttributeFormat(element, attr, "expected 'matrix(...)'")
         }
-        val numbers = rawString.split("(")[1].split(")")[0].trim().split(Regex("[,\\s]+"))
+        val numbers = rawString.split("(")[1].split(")")[0].trim().split(REGEX_COMMA_OR_SPACE)
         if (numbers.size != 6) {
             throw ParsingException.InvalidAttributeFormat(
                 element, attr,

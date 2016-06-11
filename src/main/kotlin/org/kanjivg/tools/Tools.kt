@@ -4,10 +4,7 @@ import com.typesafe.config.Config
 import org.kanjivg.tools.parsing.KanjiSVGParser
 import org.kanjivg.tools.parsing.ParsingException
 import org.slf4j.LoggerFactory
-import java.io.File
-import java.io.FileReader
-import java.util.stream.Collectors
-import java.util.stream.Stream
+import java.io.*
 import javax.xml.stream.XMLInputFactory
 
 class Tools(final val config: Config) {
@@ -22,22 +19,27 @@ class Tools(final val config: Config) {
         logger.info("Found {} files", files.size)
 
         val xmlInputFactory = XMLInputFactory.newInstance()
+        // 'kvg:' prefix causes error if namespace awareness is on
+        xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false)
+        xmlInputFactory.setProperty(XMLInputFactory.IS_VALIDATING, false)
+        // Fetching DTD makes the parsing extremely slow
+        xmlInputFactory.setXMLResolver { publicID, systemID, baseURI, namespace -> "".byteInputStream() }
 
-        Stream.of(*files.toTypedArray()).parallel().map { file ->
+        files.forEach { file ->
+            logger.info("START: {}", file.name)
+            val kanjiCode = file.nameWithoutExtension
+            val eventReader = xmlInputFactory.createXMLEventReader(FileReader(file))
             try {
-                logger.info("START: {}", file.name)
-                val kanjiCode = file.nameWithoutExtension
-                logger.info("PARSING START: {}", file.name)
-                val svg = KanjiSVGParser.parse(xmlInputFactory.createXMLEventReader(FileReader(file)))
-                logger.info("PARSING SUCCESSFUL: {}", file.name)
+                val svg = KanjiSVGParser.parse(eventReader)
+                logger.info("SUCCESSFUL: {}", file.name)
             } catch (e: ParsingException) {
                 logger.error("PARSING FAILED: {}\n{}", file.name, e.message)
                 logger.debug("Stack trace:", e)
             } catch (e: Throwable) {
                 logger.error("UNHANDLED ERROR: {}", file.name, e)
             } finally {
-                logger.info("END: {}", file.name)
+                eventReader.close()
             }
-        }.collect(Collectors.toList())
+        }
     }
 }

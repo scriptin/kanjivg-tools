@@ -29,11 +29,11 @@ sealed class ParsingException : RuntimeException {
     }
 
     class UnexpectedEvent : ParsingException {
-        constructor(expectedEventType: Class<*>, unexpectedEvent: XMLEvent) :
-            super("Expected event of type ${expectedEventType.simpleName}, " +
+        constructor(expectedEventType: Class<*>, unexpectedEvent: XMLEvent, description: String) :
+            super("Expected event of type ${expectedEventType.simpleName} ($description), " +
                 "got ${show(unexpectedEvent)}")
-        constructor(expectedEventTypes: List<Class<*>>, unexpectedEvent: XMLEvent) :
-            super("Expected one of these event types: ${expectedEventTypes.map { it.simpleName }}, " +
+        constructor(expectedEventTypes: List<Class<*>>, unexpectedEvent: XMLEvent, description: String) :
+            super("Expected one of these event types: ${expectedEventTypes.map { it.simpleName }} ($description), " +
                 "got ${show(unexpectedEvent)}")
     }
 
@@ -51,10 +51,10 @@ sealed class ParsingException : RuntimeException {
         attribute: Attribute,
         details: String,
         cause: Throwable? = null
-    ) : ParsingException("Invalid format of an attribute '$attribute' in tag $tag: $details", cause)
+    ) : ParsingException("Invalid format of an attribute [$attribute] in tag $tag: $details", cause)
 
     class MissingRequiredAttribute(tag: StartElement, attributeName: QName) :
-        ParsingException("Missing required attribute '$attributeName' in tag $tag")
+        ParsingException("Missing required attribute [$attributeName] in tag $tag")
 
     class EmptyChildrenList(parentTag: StartElement, expectedChildTag: QName) :
         ParsingException("Expected at least one child tag <$expectedChildTag> in tag $parentTag")

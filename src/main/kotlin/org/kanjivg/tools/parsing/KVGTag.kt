@@ -41,7 +41,7 @@ sealed class KVGTag(open val name: String) {
     /** SVG path element, <path> */
     class Path(
         val id: Attribute.Id,
-        val type: Attribute.KvgType,
+        val type: Attribute.KvgType?,
         val path: Attribute.Path
     ) : KVGTag("path"), StrokePathsSubGroupChild
 
