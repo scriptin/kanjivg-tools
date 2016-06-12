@@ -10,6 +10,14 @@ It consists of:
 - Various validations of those SVG files
 - (TODO) Transformation and fixing utilities for SVG files
 
+Building
+--------
+
+Requirements:
+
+- JDK 1.8+ (tested with Oracle JDK)
+- (optional) Gradle 2.13+ - project includes Gradle wrapper scripts (`gradlew` and `gradlew.bat`), you can just use those
+
 Running
 -------
 
