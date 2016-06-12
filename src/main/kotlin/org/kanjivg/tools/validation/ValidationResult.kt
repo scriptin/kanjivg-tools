@@ -1,7 +1,7 @@
 package org.kanjivg.tools.validation
 
 /**
- * Validation result is similar to Either<Failure, Success>
+ * Validation result is similar to Either/Try monad: [Passed] represents success, [Failed] represents failure
  */
 sealed class ValidationResult {
     object Passed : ValidationResult() {

@@ -6,6 +6,13 @@ import javax.xml.stream.XMLEventReader
 import javax.xml.stream.events.*
 import org.kanjivg.tools.KVGTag.Attribute as Attr
 
+/**
+ * Parser of KanjiVG SVG files based on StAX iterator API.
+ *
+ * This parser not only checks if SVG files are valid and well-formed (this is done by underlying StAX API),
+ * but also checks some KanjiVG-specific "structural" features. For example, it makes sure that
+ * a group (<g> tag) of stroke numbers only contains <text> elements with numbers inside them.
+ */
 object KanjiSVGParser {
     private const val SVG_NS = "http://www.w3.org/2000/svg"
     private const val KVG_NS = "http://kanjivg.tagaini.net"
@@ -43,6 +50,10 @@ object KanjiSVGParser {
     private val REGEX_COLON_OR_SPACE = Regex("[:\\s]+")
     private val REGEX_SEMICOLON_OR_SPACE = Regex("[;\\s]+")
 
+    /**
+     * Parse an XML file given as an event reader and return a domain object.
+     * All syntactic as well as "structural" errors will produce exceptions.
+     */
     fun parse(eventReader: XMLEventReader): KVGTag.SVG {
         eventReader.skip(setOf(
             XMLEvent.START_DOCUMENT, // <?xml ...

@@ -6,6 +6,9 @@ import javax.xml.stream.events.EndElement
 import javax.xml.stream.events.StartElement
 import javax.xml.stream.events.XMLEvent
 
+/**
+ * Human-readable exceptions for KanjiVG SVG parser
+ */
 sealed class ParsingException : RuntimeException {
     constructor(message: String) : super(message)
     constructor(message: String, cause: Throwable?) : super(message, cause)

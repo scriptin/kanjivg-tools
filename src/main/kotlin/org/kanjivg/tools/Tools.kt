@@ -8,9 +8,16 @@ import org.slf4j.LoggerFactory
 import java.io.*
 import javax.xml.stream.XMLInputFactory
 
+/**
+ * Main program class
+ */
 class Tools(final val config: Config) {
     private final val logger = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * List of available validations.
+     * TODO: make it configurable with application.conf and command-line arguments
+     */
     private final val validations = listOf(
         WidthAndHeight,
         ViewBox,
@@ -24,6 +31,9 @@ class Tools(final val config: Config) {
         NumberOrder
     )
 
+    /**
+     * Entry point for parsing and validation
+     */
     fun validate(): Unit {
         val files = getFiles(config.getString("kanjivgDir"))
         val xmlInputFactory = getXMLInputFactory()

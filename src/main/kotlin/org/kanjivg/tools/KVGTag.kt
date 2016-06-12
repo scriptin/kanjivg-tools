@@ -1,6 +1,10 @@
 package org.kanjivg.tools
 
-/** SVG tags */
+/**
+ * KanjiVG SVG tags.
+ *
+ * NB: This is not a regular SVG grammar, but rather a specialized subset of SVG used in KanjiVG
+ */
 sealed class KVGTag(open val name: String) {
     /** Root <svg> element */
     class SVG(
@@ -11,17 +15,26 @@ sealed class KVGTag(open val name: String) {
         val strokeNumbersGroup: StrokeNumbersGroup
     ) : KVGTag("svg")
 
-    /** SVG group element, <g>. NB: group itself can ba a child of another group */
+    /** SVG group element, <g> */
     abstract class Group(open val id: Attribute.Id) : KVGTag("group")
 
+    /**
+     * Group for strokes, direct child of <svg> element.
+     * It does not contain strokes, but rather has exactly one child stroke group
+     */
     class StrokePathsGroup(
         override val id: Attribute.Id,
         val style: Attribute.Style,
         val rootGroup: StrokePathsSubGroup
     ) : Group(id)
 
+    /**
+     * Stroke groups may contain other groups as well as strokes (<path> elements),
+     * thus we need a common "marker" interface to distinguish what can be nested and what cannot
+     */
     interface StrokePathsSubGroupChild
 
+    /** Group of strokes (<path> elements), may contain other groups */
     class StrokePathsSubGroup(
         override val id: Attribute.Id,
         val element: Attribute.KvgElement?,
@@ -65,13 +78,17 @@ sealed class KVGTag(open val name: String) {
 
         class ViewBox(val x: Int, val y: Int, val width: Int, val height: Int) : Attribute("viewBox")
 
+        /** Transform attribute, specialized to only support "matrix(a b c d e f)" syntax */
         class Transform(val matrix: Matrix) : Attribute("transform") {
             class Matrix(val elements: List<Double>)
         }
 
         class Style(val attributes: Map<String, String>) : Attribute("style")
 
-        // TODO: add proper type, aware of SVG path string format
+        /**
+         * Path data attribute, "d".
+         * TODO: add proper type, aware of SVG path data string format
+         */
         class Path(val value: String) : Attribute("d")
 
         /** KanjiVG-specific attributes, prefixed with "kvg:" */

@@ -6,6 +6,9 @@ import javax.xml.namespace.QName
 import javax.xml.stream.XMLEventReader
 import javax.xml.stream.events.*
 
+/**
+ * Skip events which are not important
+ */
 internal fun XMLEventReader.skip(eventsToSkip: Set<Int>) {
     if (eventsToSkip.isEmpty()) return
     while (hasNext()) {
@@ -17,6 +20,9 @@ internal fun XMLEventReader.skip(eventsToSkip: Set<Int>) {
     }
 }
 
+/**
+ * Skip any whitespace: [XMLEvent].SPACE and [XMLEvent].CHARACTERS (if contains only whitespace characters)
+ */
 internal fun XMLEventReader.skipSpace() {
     while (hasNext()) {
         val event = peek()
@@ -28,6 +34,9 @@ internal fun XMLEventReader.skipSpace() {
     }
 }
 
+/**
+ * Get next event as a specific subclass of [XMLEvent]
+ */
 internal fun <E : XMLEvent> XMLEventReader.nextAs(clazz: Class<E>, description: String): E {
     try {
         val event = nextEvent() ?: throw NullPointerException("nextEvent() returned null")
@@ -41,6 +50,9 @@ internal fun <E : XMLEvent> XMLEventReader.nextAs(clazz: Class<E>, description: 
     }
 }
 
+/**
+ * Read opening tag event
+ */
 internal fun XMLEventReader.openTag(name: QName, description: String): StartElement {
     skipSpace()
     val event = nextAs(StartElement::class.java, "opening tag <$name>")
@@ -51,6 +63,9 @@ internal fun XMLEventReader.openTag(name: QName, description: String): StartElem
     return event
 }
 
+/**
+ * Read closing tag event
+ */
 internal fun XMLEventReader.closeTag(name: QName, description: String): Unit {
     skipSpace()
     val event = nextAs(EndElement::class.java, "closing tag </$name>")
@@ -60,6 +75,9 @@ internal fun XMLEventReader.closeTag(name: QName, description: String): Unit {
     skipSpace()
 }
 
+/**
+ * Read whole tag (opening and closing) given a lambda to parse its' attributes and body
+ */
 internal fun <T> XMLEventReader.tag(name: QName, description: String, convert: (StartElement) -> T): T {
     val tag = openTag(name, description)
     val result = convert(tag)
@@ -67,6 +85,9 @@ internal fun <T> XMLEventReader.tag(name: QName, description: String, convert: (
     return result
 }
 
+/**
+ * Read a homogeneous list of child tags
+ */
 internal fun <T : KVGTag> XMLEventReader.tagList(extractor: (XMLEventReader) -> T?): List<T> {
     val result = mutableListOf<T>()
     while (hasNext()) {
@@ -78,6 +99,9 @@ internal fun <T : KVGTag> XMLEventReader.tagList(extractor: (XMLEventReader) -> 
     return result.toList()
 }
 
+/**
+ * Read a homogeneous list of child tags and make sure it's not empty (throw exceptions otherwise)
+ */
 internal fun <T : KVGTag> XMLEventReader.nonEmptyTagList(
     parentTag: StartElement,
     childTagName: QName,
@@ -90,6 +114,13 @@ internal fun <T : KVGTag> XMLEventReader.nonEmptyTagList(
     return result
 }
 
+/**
+ * Read a heterogeneous list of child tags
+ *
+ * NB: [T] is not a subtype of [KVGTag] because this function has to return a list of elements of different types,
+ * thus they may only have a common interface or be of some subtype of [KVGTag] in a best case.
+ * Given lambda has to deal with types appropriately
+ */
 internal fun <T> XMLEventReader.tagList(parser: (StartElement, XMLEventReader) -> T): List<T> {
     val result = mutableListOf<T>()
     loop@ while (hasNext()) {
@@ -109,6 +140,9 @@ internal fun <T> XMLEventReader.tagList(parser: (StartElement, XMLEventReader) -
     return result.toList()
 }
 
+/**
+ * Read characters event
+ */
 internal fun XMLEventReader.characters(parentTag: StartElement): Characters {
     val event = nextAs(Characters::class.java, "characters inside $parentTag")
     if (event.isCData || event.isIgnorableWhiteSpace) {
@@ -117,10 +151,20 @@ internal fun XMLEventReader.characters(parentTag: StartElement): Characters {
     return event
 }
 
+/**
+ * Convert [QName] into a [String] of 'prefix:localName' or 'localName' format
+ *
+ * NB: Namespace is simply ignored, which is the opposite of equals() methods of [QName],
+ * which compares namespace and localPart, ignoring a prefix
+ */
 internal fun QName.toPlainString(): String {
     return "${prefix?.let { if (it.isEmpty()) "" else "$it:" } ?: ""}$localPart"
 }
 
+/**
+ * Check if a tag only has attributes from a given set, throw an exception if some extra attributes are present,
+ * but treat elements of this set as optional (i.e. allow missing attributes)
+ */
 internal fun StartElement.checkAllowedAttributes(attrs: Set<QName>): Unit {
     val allowedAttrs = attrs.map { it.toPlainString() }
     val actualAttrs = attributes.asSequence().map { attr ->
@@ -138,20 +182,38 @@ internal fun StartElement.checkAllowedAttributes(attrs: Set<QName>): Unit {
     }
 }
 
+/**
+ * Get an attribute or throw an exception
+ */
 internal fun StartElement.requiredAttr(name: QName): Attribute {
     return getAttributeByName(name) ?:
         throw ParsingException.MissingRequiredAttribute(this, name)
 }
 
+/**
+ * Get an attribute value as an optional [String]
+ */
 internal fun StartElement.attrString(name: QName): String? = getAttributeByName(name)?.value
 
+/**
+ * Get an attribute value as an optional [Int]
+ */
 internal fun StartElement.attrInt(name: QName): Int? = getAttributeByName(name)?.toInt(this)
 
+/**
+ * Get an attribute value as an optional [Boolean]
+ */
 internal fun StartElement.attrBoolean(name: QName): Boolean? = getAttributeByName(name)?.toBoolean(this)
 
+/**
+ * Get an attribute value as an optional [Enum]
+ */
 internal fun <E : Enum<E>> StartElement.attrEnum(name: QName, enumClass: Class<E>): E? =
     getAttributeByName(name)?.toEnum(this, enumClass)
 
+/**
+ * Convert an attribute value to [Int]
+ */
 internal fun Attribute.toInt(context: StartElement): Int {
     try {
         return value.toInt()
@@ -160,6 +222,9 @@ internal fun Attribute.toInt(context: StartElement): Int {
     }
 }
 
+/**
+ * Convert an attribute value to [Boolean]
+ */
 internal fun Attribute.toBoolean(context: StartElement): Boolean {
     try {
         return value.toBoolean()
@@ -168,6 +233,9 @@ internal fun Attribute.toBoolean(context: StartElement): Boolean {
     }
 }
 
+/**
+ * Convert an attribute value to [Enum]
+ */
 internal fun <E : Enum<E>> Attribute.toEnum(context: StartElement, enumClass: Class<E>): E {
     try {
         return java.lang.Enum.valueOf(enumClass, value)
