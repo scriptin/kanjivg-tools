@@ -35,7 +35,7 @@ class Tools(final val config: Config) {
      * Entry point for parsing and validation
      */
     fun validate(): Unit {
-        val files = getFiles(config.getString("kanjivgDir"))
+        val files = getFiles(config.getString("kanjivg.dir"))
         val xmlInputFactory = getXMLInputFactory()
         printValidationsInfo(validations)
         files.forEach { file ->
