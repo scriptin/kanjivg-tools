@@ -20,7 +20,8 @@ class Tools(final val config: Config) {
         StrokeIds,
         NumberRootGroupId,
         NumberRootGroupStyle,
-        StrokeNumbersCount
+        StrokeNumbersCount,
+        NumberOrder
     )
 
     fun validate(): Unit {
