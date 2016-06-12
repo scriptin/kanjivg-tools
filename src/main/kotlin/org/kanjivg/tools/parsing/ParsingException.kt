@@ -56,6 +56,9 @@ sealed class ParsingException : RuntimeException {
     class MissingRequiredAttribute(tag: StartElement, attributeName: QName) :
         ParsingException("Missing required attribute [$attributeName] in tag $tag")
 
+    class ProhibitedAttributes(tag: StartElement, attributeNames: List<String>, allowedAttributes: List<String>) :
+        ParsingException("Prohibited attributes $attributeNames in tag $tag, allowed attributes are $allowedAttributes")
+
     class EmptyChildrenList(parentTag: StartElement, expectedChildTag: QName) :
         ParsingException("Expected at least one child tag <$expectedChildTag> in tag $parentTag")
 

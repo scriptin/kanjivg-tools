@@ -17,6 +17,7 @@ object KanjiSVGParser {
     private val TAG_PATH = QName("path")
     private val TAG_TEXT = QName("text")
 
+    private val ATTR_XMLNS = QName("xmlns")
     private val ATTR_ID = QName("id")
     private val ATTR_WIDTH = QName("width")
     private val ATTR_HEIGHT = QName("height")
@@ -166,6 +167,27 @@ object KanjiSVGParser {
         return event
     }
 
+    private fun QName.toPlainString(): String {
+        return "${prefix?.let { if (it.isEmpty()) "" else "$it:" } ?: ""}$localPart"
+    }
+
+    private fun StartElement.checkAllowedAttributes(attrs: Set<QName>): Unit {
+        val allowedAttrs = attrs.map { it.toPlainString() }
+        val actualAttrs = attributes.asSequence().map { attr ->
+            when (attr) {
+                is Attribute -> attr.name.toPlainString()
+                else -> throw RuntimeException(
+                    "Found an object [${attr.toString()}] in attributes of element $this, " +
+                        "not an instance of ${Attribute::class.java}"
+                )
+            }
+        }.toList()
+        val prohibitedAttrs = actualAttrs.filter { !allowedAttrs.contains(it) }
+        if (prohibitedAttrs.isNotEmpty()) {
+            throw ParsingException.ProhibitedAttributes(this, prohibitedAttrs, allowedAttrs)
+        }
+    }
+
     private fun StartElement.requiredAttr(name: QName): Attribute {
         return getAttributeByName(name) ?:
             throw ParsingException.MissingRequiredAttribute(this, name)
@@ -211,6 +233,11 @@ object KanjiSVGParser {
 
     private fun svg(eventReader: XMLEventReader): KVGTag.SVG {
         return eventReader.tag(TAG_SVG, "root tag") { tag ->
+            tag.checkAllowedAttributes(setOf(
+                ATTR_XMLNS,
+                ATTR_WIDTH, ATTR_HEIGHT,
+                ATTR_VIEW_BOX
+            ))
             KVGTag.SVG(
                 width = Attr.Width(tag.requiredAttr(ATTR_WIDTH).toInt(tag)),
                 height = Attr.Height(tag.requiredAttr(ATTR_HEIGHT).toInt(tag)),
@@ -223,6 +250,7 @@ object KanjiSVGParser {
 
     private fun strokePathsGroup(eventReader: XMLEventReader): KVGTag.StrokePathsGroup {
         return eventReader.tag(TAG_GROUP, "stroke paths group") { tag ->
+            tag.checkAllowedAttributes(setOf(ATTR_ID, ATTR_STYLE, ATTR_ELEMENT))
             KVGTag.StrokePathsGroup(
                 id = id(tag),
                 style = style(tag),
@@ -233,6 +261,20 @@ object KanjiSVGParser {
 
     private fun strokeGroup(eventReader: XMLEventReader): KVGTag.StrokePathsSubGroup {
         return eventReader.tag(TAG_GROUP, "stroke group") { tag ->
+            tag.checkAllowedAttributes(setOf(
+                ATTR_ID,
+                ATTR_ELEMENT,
+                ATTR_ORIGINAL,
+                ATTR_POSITION,
+                ATTR_VARIANT,
+                ATTR_PARTIAL,
+                ATTR_PART,
+                ATTR_NUMBER,
+                ATTR_RADICAL,
+                ATTR_PHON,
+                ATTR_TRAD_FORM,
+                ATTR_RADICAL_FORM
+            ))
             KVGTag.StrokePathsSubGroup(
                 id = id(tag),
                 element = tag.attrString(ATTR_ELEMENT)?.let { Attr.KvgElement(it) },
@@ -261,6 +303,7 @@ object KanjiSVGParser {
 
     private fun stroke(eventReader: XMLEventReader): KVGTag.Path {
         return eventReader.tag(TAG_PATH, "stroke path") { tag ->
+            tag.checkAllowedAttributes(setOf(ATTR_ID, ATTR_PATH, ATTR_TYPE))
             KVGTag.Path(
                 id = id(tag),
                 type = tag.attrString(ATTR_TYPE)?.let { Attr.KvgType(it) },
@@ -271,6 +314,7 @@ object KanjiSVGParser {
 
     private fun strokeNumbersGroup(eventReader: XMLEventReader): KVGTag.StrokeNumbersGroup {
         return eventReader.tag(TAG_GROUP, "stroke numbers group") { tag ->
+            tag.checkAllowedAttributes(setOf(ATTR_ID, ATTR_STYLE))
             KVGTag.StrokeNumbersGroup(
                 id = id(tag),
                 style = style(tag),
@@ -281,6 +325,7 @@ object KanjiSVGParser {
 
     private fun strokeNumber(eventReader: XMLEventReader): KVGTag.StrokeNumber? {
         return eventReader.tag(TAG_TEXT, "stroke number") { tag ->
+            tag.checkAllowedAttributes(setOf(ATTR_TRANSFORM))
             KVGTag.StrokeNumber(
                 transform = transform(tag),
                 value = strokeNumberValue(tag, eventReader)
