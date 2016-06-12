@@ -4,7 +4,12 @@ import ch.qos.logback.core.ConsoleAppender
 import static ch.qos.logback.classic.Level.*
 
 def getLogLevel() {
-    valueOf(System.getProperty('log.level')?.toUpperCase()) ?: INFO
+    def level = System.getProperty('log.level')?.toUpperCase() ?: ""
+    if ( ! level.isEmpty()) {
+        valueOf(level)
+    } else {
+        WARN
+    }
 }
 
 appender("STDOUT", ConsoleAppender) {
