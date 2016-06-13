@@ -33,8 +33,8 @@ class Tools {
     /**
      * Entry point for parsing and validation
      */
-    fun validate(kvgDir: String): Unit {
-        val files = getFiles(kvgDir)
+    fun validate(kvgDir: String, fileNameFilters: List<String>): Unit {
+        val files = getFiles(kvgDir, fileNameFilters)
         val xmlInputFactory = getXMLInputFactory()
         printValidationsInfo(validations)
         files.forEach { file ->
@@ -65,12 +65,28 @@ class Tools {
         }
     }
 
-    private fun getFiles(dir: String): List<File> {
+    /**
+     * Escape filter strings: '*' becomes '.*', everything else is treated as literal
+     */
+    private fun prepareFilters(filters: List<String>): List<Regex> {
+        return filters.map { filter ->
+            Regex(filter.split("*").map { Regex.escape(it) }.joinToString(".*"))
+        }
+    }
+
+    private fun getFiles(dir: String, filters: List<String>): List<File> {
         logger.info("Scanning KanjiVG directory: {}", dir)
-        val files: List<File> = File(dir).walk().onFail { file, ioException ->
-            throw RuntimeException("Error processing a file '$file'", ioException)
-        }.filter { it.isFile }.toList()
-        logger.info("Found {} files", files.size)
+        val regexFilters = prepareFilters(filters)
+        val files: List<File> = File(dir).walk()
+            .onFail { file, ioException ->
+                throw RuntimeException("Error processing a file '$file'", ioException)
+            }
+            .filter { it.isFile }
+            .filter { file ->
+                regexFilters.indexOfFirst { flt -> flt.matches(file.nameWithoutExtension) } >= 0
+            }
+            .toList()
+        logger.info("Found {} files matching filters: {}", files.size, filters)
         return files
     }
 
@@ -86,6 +102,6 @@ class Tools {
 
     private fun printValidationsInfo(validations: List<Validation>) {
         val validationDescriptions = validations.map { "${it.name}: ${it.description}" }
-        logger.info("Validations:\n  ${validationDescriptions.joinToString("\n  ")}")
+        logger.info("Enabled validations:\n  ${validationDescriptions.joinToString("\n  ")}")
     }
 }

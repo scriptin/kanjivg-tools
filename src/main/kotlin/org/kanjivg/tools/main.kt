@@ -22,8 +22,12 @@ fun main(args: Array<String>) {
         )
     }
     logger.info(frame("task: ${task.name}"))
+    val kanjiVGDir = config.getString("kanjivg.dir")
     when (task) {
-        TaskType.VALIDATE -> tools.validate(config.getString("kanjivg.dir"))
+        TaskType.VALIDATE -> {
+            val fileNameFilters = config.getString("${TaskType.VALIDATE.name.toLowerCase()}.files").split(",")
+            tools.validate(kanjiVGDir, fileNameFilters)
+        }
     }
 }
 
