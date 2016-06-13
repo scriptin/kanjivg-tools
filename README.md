@@ -49,3 +49,13 @@ Arguments:
     - `-Dvalidate.files=01a2b` - matches a single file `01a2b.svg`
     - `-Dvalidate.files=01a2b*` - matches `01a2b.svg`, `01a2b-Kaisho.svg`, etc.
     - `-Dvalidate.files=01a2b,03c4d,05e6f` - matches `01a2b.svg`, `03c4d.svg`, `05e6f.svg`
+
+License
+-------
+
+This work is licensed under a [Creative Commons Attribution 4.0 International License][license].
+
+[![Creative Commons Attribution 4.0 International License][license-img]][license]
+
+  [license]: http://creativecommons.org/licenses/by/4.0/
+  [license-img]: https://i.creativecommons.org/l/by/4.0/88x31.png
