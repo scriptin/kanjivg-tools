@@ -37,3 +37,15 @@ Arguments:
     - `INFO` - reports progress, parsing/validation errors and application errors
     - `WARN` (default) - reports parsing/validation errors and application errors
     - `ERROR` least verbose, reports only application errors
+- `-Dtask=validate` (optional) - task to run:
+    - `validate` (default) - parse and validate files
+
+### Validation task (`validate`) options:
+
+- `-Dvalidate.files=*` - list of glob-like patterns to filter files by their names w/o '.svg' extension,
+  where `*` denotes any number of any characters
+  Examples:
+    - `-Dvalidate.files=*` (default) - matches all files
+    - `-Dvalidate.files=01a2b` - matches a single file `01a2b.svg`
+    - `-Dvalidate.files=01a2b*` - matches `01a2b.svg`, `01a2b-Kaisho.svg`, etc.
+    - `-Dvalidate.files=01a2b,03c4d,05e6f` - matches `01a2b.svg`, `03c4d.svg`, `05e6f.svg`
