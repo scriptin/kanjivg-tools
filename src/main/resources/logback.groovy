@@ -19,5 +19,6 @@ appender("STDOUT", ConsoleAppender) {
 }
 
 logger("org.kanjivg.tools", getLogLevel())
+logger("org.kanjivg.tools.main", INFO)
 
 root(WARN, ["STDOUT"])

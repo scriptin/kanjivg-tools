@@ -1,6 +1,5 @@
 package org.kanjivg.tools
 
-import com.typesafe.config.Config
 import org.kanjivg.tools.parsing.KanjiSVGParser
 import org.kanjivg.tools.parsing.ParsingException
 import org.kanjivg.tools.validation.*
@@ -11,7 +10,7 @@ import javax.xml.stream.XMLInputFactory
 /**
  * Main program class
  */
-class Tools(final val config: Config) {
+class Tools {
     private final val logger = LoggerFactory.getLogger(javaClass)
 
     /**
@@ -34,8 +33,8 @@ class Tools(final val config: Config) {
     /**
      * Entry point for parsing and validation
      */
-    fun validate(): Unit {
-        val files = getFiles(config.getString("kanjivg.dir"))
+    fun validate(kvgDir: String): Unit {
+        val files = getFiles(kvgDir)
         val xmlInputFactory = getXMLInputFactory()
         printValidationsInfo(validations)
         files.forEach { file ->
