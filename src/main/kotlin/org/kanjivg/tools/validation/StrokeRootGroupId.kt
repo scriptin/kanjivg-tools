@@ -8,10 +8,12 @@ object StrokeRootGroupId : Validation(
 ) {
     override fun validate(fileId: String, svg: KVGTag.SVG): ValidationResult {
         val id = svg.strokePathsGroup.id.value
-        return if (id == "kvg:StrokePaths_$fileId") {
+        return if (id == getExpectedId(fileId)) {
             ValidationResult.Passed
         } else {
-            ValidationResult.Failed("id=$id, expected 'kvg:StrokePaths_$fileId'")
+            ValidationResult.Failed("id=$id, expected '${getExpectedId(fileId)}'")
         }
     }
+
+    fun getExpectedId(fileId: String): String = "kvg:StrokePaths_$fileId"
 }
