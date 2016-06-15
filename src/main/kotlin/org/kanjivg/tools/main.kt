@@ -2,13 +2,9 @@ package org.kanjivg.tools
 
 import com.typesafe.config.ConfigFactory
 import org.kanjivg.tools.tasks.RepairIdsTask
+import org.kanjivg.tools.tasks.TaskType
 import org.kanjivg.tools.tasks.ValidationTask
 import org.slf4j.LoggerFactory
-
-private enum class TaskType {
-    VALIDATE,
-    REPAIR_IDS
-}
 
 fun main(args: Array<String>) {
     val logger = LoggerFactory.getLogger("org.kanjivg.tools.main")
