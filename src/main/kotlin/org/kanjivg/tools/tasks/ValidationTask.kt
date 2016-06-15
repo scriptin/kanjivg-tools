@@ -1,4 +1,4 @@
-package org.kanjivg.tools
+package org.kanjivg.tools.tasks
 
 import org.kanjivg.tools.parsing.KanjiSVGParser
 import org.kanjivg.tools.parsing.ParsingException
@@ -7,10 +7,7 @@ import org.slf4j.LoggerFactory
 import java.io.*
 import javax.xml.stream.XMLInputFactory
 
-/**
- * Main program class
- */
-class Tools {
+object ValidationTask {
     private final val logger = LoggerFactory.getLogger(javaClass)
 
     /**
@@ -57,8 +54,6 @@ class Tools {
             } catch (e: ParsingException) {
                 logger.error("PARSING FAILED: {} - {}", file.name, e.message)
                 logger.debug("Stack trace:", e)
-            } catch (e: Throwable) {
-                logger.error("UNHANDLED ERROR: {}", file.name, e)
             } finally {
                 eventReader.close()
             }

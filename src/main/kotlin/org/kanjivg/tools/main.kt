@@ -1,16 +1,18 @@
 package org.kanjivg.tools
 
 import com.typesafe.config.ConfigFactory
+import org.kanjivg.tools.tasks.RepairIdsTask
+import org.kanjivg.tools.tasks.ValidationTask
 import org.slf4j.LoggerFactory
 
 private enum class TaskType {
-    VALIDATE
+    VALIDATE,
+    REPAIR_IDS
 }
 
 fun main(args: Array<String>) {
     val logger = LoggerFactory.getLogger("org.kanjivg.tools.main")
     val config = ConfigFactory.load()
-    val tools = Tools()
     val taskId = config.getString("task")
     val task = try {
         TaskType.valueOf(taskId.toUpperCase())
@@ -26,7 +28,11 @@ fun main(args: Array<String>) {
     when (task) {
         TaskType.VALIDATE -> {
             val fileNameFilters = config.getString("${TaskType.VALIDATE.name.toLowerCase()}.files").split(",")
-            tools.validate(kanjiVGDir, fileNameFilters)
+            ValidationTask.validate(kanjiVGDir, fileNameFilters)
+        }
+        TaskType.REPAIR_IDS -> {
+            val fileNameFilters = config.getString("${TaskType.REPAIR_IDS.name.toLowerCase()}.files").split(",")
+            RepairIdsTask.repairIds(kanjiVGDir, fileNameFilters)
         }
     }
 }
