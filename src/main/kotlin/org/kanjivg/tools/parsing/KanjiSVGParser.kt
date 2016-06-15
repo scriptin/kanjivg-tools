@@ -53,6 +53,7 @@ object KanjiSVGParser {
     /**
      * Parse an XML file given as an event reader and return a domain object.
      * All syntactic as well as "structural" errors will produce exceptions.
+     * @throws [ParsingException]
      */
     fun parse(eventReader: XMLEventReader): KVGTag.SVG {
         eventReader.skip(setOf(
