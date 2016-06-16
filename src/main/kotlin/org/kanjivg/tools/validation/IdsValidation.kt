@@ -10,9 +10,11 @@ abstract class IdsValidation(
 
     abstract protected fun suffix(idx: Int): String
 
+    fun getExpectedId(fileId: String, idx: Int): String = "kvg:$fileId${suffix(idx)}"
+
     override fun validate(fileId: String, svg: KVGTag.SVG): ValidationResult {
         val ids = getIds(svg.strokePathsGroup.rootGroup)
-        val mismatches = ids.mapIndexed { idx, id -> Pair(id, "kvg:$fileId${suffix(idx)}") }
+        val mismatches = ids.mapIndexed { idx, id -> Pair(id, getExpectedId(fileId, idx)) }
             .filter { pair -> pair.first != pair.second }
         return if (mismatches.isEmpty()) {
             ValidationResult.Passed
