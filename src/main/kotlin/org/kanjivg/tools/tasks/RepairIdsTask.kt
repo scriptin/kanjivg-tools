@@ -8,7 +8,9 @@ import javax.xml.stream.XMLEventFactory
 import javax.xml.stream.XMLEventReader
 import javax.xml.stream.XMLEventWriter
 import javax.xml.stream.events.Attribute
+import javax.xml.stream.events.StartDocument
 import javax.xml.stream.events.StartElement
+import javax.xml.stream.events.XMLEvent
 
 object RepairIdsTask : Task() {
     fun repairIds(kvgDir: String, fileNameFilters: List<String>): Unit {
@@ -84,7 +86,15 @@ object RepairIdsTask : Task() {
             var strokeIndex = 0
             while (sourceEventReader.hasNext()) {
                 val event = sourceEventReader.peek()
-                if (event.isStartElement) {
+                if (event.isStartDocument) {
+                    // Fix missing encoding
+                    val startDocument = event as StartDocument
+                    targetEventWriter.add(eventFactory.createStartDocument(
+                        startDocument.characterEncodingScheme,
+                        startDocument.version
+                    ))
+                    sourceEventReader.nextEvent() // flush original
+                } else if (event.isStartElement) {
                     val tag = Tree.Tag(current, event.asStartElement().name.localPart, mutableListOf())
                     current.children.add(tag)
                     current = tag
@@ -108,6 +118,10 @@ object RepairIdsTask : Task() {
                     targetEventWriter.add(sourceEventReader.nextEvent())
                 } else {
                     targetEventWriter.add(sourceEventReader.nextEvent())
+                }
+                if (setOf(XMLEvent.START_DOCUMENT, XMLEvent.COMMENT, XMLEvent.DTD).contains(event.eventType)) {
+                    // Fix missing newlines after some elements
+                    targetEventWriter.add(eventFactory.createCharacters("\n"))
                 }
             }
             targetEventWriter.flush()
