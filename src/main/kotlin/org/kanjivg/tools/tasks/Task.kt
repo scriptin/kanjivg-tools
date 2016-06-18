@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileReader
 import javax.xml.stream.XMLInputFactory
-import javax.xml.stream.XMLOutputFactory
 
 /**
  * Base class for tasks.
@@ -68,9 +67,4 @@ abstract class Task {
         xmlInputFactory.setXMLResolver { publicID, systemID, baseURI, namespace -> "".byteInputStream() }
         return xmlInputFactory
     }
-
-    /**
-     * Create new instance of [XMLOutputFactory]
-     */
-    protected fun createXMLOutputFactory(): XMLOutputFactory = XMLOutputFactory.newFactory()
 }

@@ -3,21 +3,16 @@ package org.kanjivg.tools.tasks
 import org.kanjivg.tools.parsing.KanjiSVGParser
 import org.kanjivg.tools.validation.*
 import java.io.*
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import javax.xml.namespace.QName
-import javax.xml.stream.XMLEventFactory
 import javax.xml.stream.XMLEventReader
-import javax.xml.stream.XMLEventWriter
-import javax.xml.stream.events.Attribute
-import javax.xml.stream.events.StartDocument
 import javax.xml.stream.events.StartElement
-import javax.xml.stream.events.XMLEvent
 
 object RepairIdsTask : Task() {
     fun repairIds(kvgDir: String, fileNameFilters: List<String>): Unit {
         val files = getFiles(kvgDir, fileNameFilters)
         val xmlInputFactory = createXMLInputFactory()
-        val xmlOutputFactory = createXMLOutputFactory()
-        val xmlEventFactory = XMLEventFactory.newFactory()
         files.forEach { file ->
             val fileId = file.nameWithoutExtension
             val eventReader = xmlInputFactory.createXMLEventReader(FileReader(file))
@@ -30,15 +25,15 @@ object RepairIdsTask : Task() {
                     StrokeIds.validate(fileId, svg) is ValidationResult.Failed
                 )
                 if (thingsToRepair.needsRepair()) {
-                    val updatedFileName = "$kvgDir${File.separator}$fileId-fixed-ids.svg"
-                    logger.warn("Repairing IDs in {}, writing into {}", fileId, updatedFileName)
-                    repairXml(
+                    logger.warn("Repairing IDs in {}, overwriting a file", fileId)
+                    val contents = String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)
+                    val repairedContents = repairXml(
                         xmlInputFactory.createXMLEventReader(FileReader(file)),
-                        xmlOutputFactory.createXMLEventWriter(FileWriter(updatedFileName)),
-                        xmlEventFactory,
+                        contents,
                         thingsToRepair,
                         fileId
                     )
+                    file.writeBytes(repairedContents.toByteArray(StandardCharsets.UTF_8))
                 } else {
                     logger.info("No changes required in {}", fileId)
                 }
@@ -64,125 +59,154 @@ object RepairIdsTask : Task() {
      * XML tree, used to track location inside a file
      */
     private sealed class Tree(open val name: String, open val children: MutableList<Tag>) {
-        class Root(override val children: MutableList<Tag>) : Tree("root", children)
+        class Root(override val children: MutableList<Tag>) : Tree("root", children) {
+            override fun toString(): String = "Root(name='$name', children=$children)"
+        }
+
         class Tag(
             val parent: Tree,
             override val name: String,
             override val children: MutableList<Tag>
-        ) : Tree(name, children)
+        ) : Tree(name, children) {
+            override fun toString(): String = "Tag(name='$name', children=$children)"
+        }
     }
+
+    private fun escape(s: String): String = s.replace("\n", "\\n").replace("\t", "\\t")
 
     private fun repairXml(
         sourceEventReader: XMLEventReader,
-        targetEventWriter: XMLEventWriter,
-        eventFactory: XMLEventFactory,
+        contents: String,
         thingsToRepair: ThingsToRepair,
         fileId: String
-    ): Unit {
+    ): String {
+        var updatedContents = contents
+        var extraLength = 0
         try {
             val xml = Tree.Root(mutableListOf())
             var current: Tree = xml
             var groupIndex = 0
             var strokeIndex = 0
+            var offsetStart = -1
+            var offsetEnd = 0
             while (sourceEventReader.hasNext()) {
-                val event = sourceEventReader.peek()
-                if (event.isStartDocument) {
-                    // Fix missing encoding
-                    val startDocument = event as StartDocument
-                    targetEventWriter.add(eventFactory.createStartDocument(
-                        startDocument.characterEncodingScheme,
-                        startDocument.version
-                    ))
-                    sourceEventReader.nextEvent() // flush original
-                } else if (event.isStartElement) {
-                    val tag = Tree.Tag(current, event.asStartElement().name.localPart, mutableListOf())
+                val event = sourceEventReader.nextEvent()
+                offsetStart = if (offsetStart == -1) 0 else offsetEnd
+                offsetEnd = if (event.location.characterOffset > 0) {
+                    event.location.characterOffset
+                } else {
+                    contents.length
+                }
+                if (event.isCharacters) {
+                    // Characters event before opening/closing have character offset with "<"/"</" included
+                    val substring = contents.substring(offsetStart, offsetEnd)
+                    if (substring.endsWith("</")) {
+                        offsetEnd -= 2
+                    } else if (substring.endsWith("<")) {
+                        offsetEnd -= 1
+                    }
+                }
+                if (logger.isDebugEnabled) {
+                    logger.debug(
+                        "eventType: {}, offsetStart: {}, offsetEnd: {}\n===\n{}\n{}\n===",
+                        event.eventType, offsetStart, offsetEnd,
+                        escape(contents.substring(offsetStart, offsetEnd)),
+                        escape(event.toString())
+                    )
+                }
+                if (event.isStartElement) {
+                    val startElement = event.asStartElement()
+                    val tag = Tree.Tag(current, startElement.name.localPart, mutableListOf())
                     current.children.add(tag)
                     current = tag
-                    targetEventWriter.add(repairIfNecessary(
-                        eventFactory,
-                        event.asStartElement(),
+                    val (newContents, lengthDelta) = repairIfNecessary(
+                        updatedContents, offsetStart, offsetEnd, extraLength,
+                        startElement,
                         tag,
                         thingsToRepair,
                         fileId,
                         groupIndex, strokeIndex
-                    ))
+                    )
+                    updatedContents = newContents
+                    extraLength += lengthDelta
                     if (tag.name == "g" && tag.parent.name == "g") {
                         groupIndex += 1
                     }
                     if (tag.name == "path") {
                         strokeIndex += 1
                     }
-                    sourceEventReader.nextEvent() // flush original
                 } else if (event.isEndElement) {
                     current = (current as Tree.Tag).parent
-                    targetEventWriter.add(sourceEventReader.nextEvent())
-                } else {
-                    targetEventWriter.add(sourceEventReader.nextEvent())
-                }
-                if (setOf(XMLEvent.START_DOCUMENT, XMLEvent.COMMENT, XMLEvent.DTD).contains(event.eventType)) {
-                    // Fix missing newlines after some elements
-                    targetEventWriter.add(eventFactory.createCharacters("\n"))
                 }
             }
-            targetEventWriter.flush()
+            logger.debug("XML tree: {}", xml)
         } finally {
             sourceEventReader.close()
-            targetEventWriter.close()
         }
+        return updatedContents
     }
 
     private fun repairIfNecessary(
-        eventFactory: XMLEventFactory,
+        contents: String,
+        offsetStart: Int,
+        offsetEnd: Int,
+        extraLength: Int,
         startElement: StartElement,
         tag: Tree.Tag,
         thingsToRepair: ThingsToRepair,
         fileId: String,
         groupIndex: Int,
         strokeIndex: Int
-    ): StartElement {
-        if ( ! thingsToRepair.needsRepair()) {
-            return startElement
-        }
+    ): Pair<String, Int> {
+        if ( ! thingsToRepair.needsRepair()) return Pair(contents, 0)
         if (tag.name == "g" && tag.parent.name == "svg") {
             if (thingsToRepair.strokeRootGroupId && tag.parent.children.indexOf(tag) == 0) {
-                return replaceIdIfNecessary(eventFactory, startElement, StrokeRootGroupId.getExpectedId(fileId))
+                return replaceIdIfNecessary(
+                    contents, offsetStart, offsetEnd, extraLength,
+                    startElement, StrokeRootGroupId.getExpectedId(fileId)
+                )
             }
             if (thingsToRepair.numberRootGroupId && tag.parent.children.indexOf(tag) == 1) {
-                return replaceIdIfNecessary(eventFactory, startElement, NumberRootGroupId.getExpectedId(fileId))
+                return replaceIdIfNecessary(
+                    contents, offsetStart, offsetEnd, extraLength,
+                    startElement, NumberRootGroupId.getExpectedId(fileId)
+                )
             }
         }
         if (thingsToRepair.strokeGroupIds && tag.name == "g" && tag.parent.name == "g") {
-            return replaceIdIfNecessary(eventFactory, startElement, StrokeGroupsIds.getExpectedId(fileId, groupIndex))
+            return replaceIdIfNecessary(
+                contents, offsetStart, offsetEnd, extraLength,
+                startElement, StrokeGroupsIds.getExpectedId(fileId, groupIndex)
+            )
         }
         if (thingsToRepair.strokeIds && tag.name == "path") {
-            return replaceIdIfNecessary(eventFactory, startElement, StrokeIds.getExpectedId(fileId, strokeIndex))
+            return replaceIdIfNecessary(
+                contents, offsetStart, offsetEnd, extraLength,
+                startElement, StrokeIds.getExpectedId(fileId, strokeIndex)
+            )
         }
-        return startElement
+        return Pair(contents, 0)
     }
 
     private fun replaceIdIfNecessary(
-        eventFactory: XMLEventFactory,
+        contents: String,
+        offsetStart: Int,
+        offsetEnd: Int,
+        extraLength: Int,
         startElement: StartElement,
         expectedId: String
-    ): StartElement {
+    ): Pair<String, Int> {
         val actualId = startElement.getAttributeByName(QName("id")).value
-        logger.debug("actual ID={}, expected ID={}", actualId, expectedId)
+        val start = offsetStart + extraLength
+        val end = offsetEnd + extraLength
         if (actualId != expectedId) {
-            @Suppress("UNCHECKED_CAST")
-            val attributes = (startElement.attributes as Iterator<Attribute>).asSequence().map { attr ->
-                if (attr.name.localPart == "id") {
-                    eventFactory.createAttribute(attr.name, expectedId)
-                } else {
-                    attr
-                }
-            }.iterator()
-            return eventFactory.createStartElement(
-                startElement.name,
-                attributes,
-                startElement.namespaces
-            )
+            logger.debug("actual ID is '{}', expected '{}'", actualId, expectedId)
+            val before = if (start == 0) "" else contents.substring(0, start)
+            val element = contents.substring(start, end).replace("id=\"$actualId\"", "id=\"$expectedId\"")
+            val after = if (end == contents.length) "" else contents.substring(end, contents.length)
+            return Pair(before + element + after, expectedId.length - actualId.length)
         }
-        return startElement
+        return Pair(contents, 0)
     }
 }
 
