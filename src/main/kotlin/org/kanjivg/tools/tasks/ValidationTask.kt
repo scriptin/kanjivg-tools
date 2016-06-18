@@ -17,7 +17,8 @@ object ValidationTask : Task() {
         NumberRootGroupId,
         NumberRootGroupStyle,
         StrokeNumbersCount,
-        NumberOrder
+        NumberOrder,
+        NumberPositions
     )
 
     /**
