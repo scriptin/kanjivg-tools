@@ -14,8 +14,6 @@ import org.kanjivg.tools.KVGTag.Attribute as Attr
  * a group (<g> tag) of stroke numbers only contains <text> elements with numbers inside them.
  */
 object KanjiSVGParser {
-    private const val SVG_NS = "http://www.w3.org/2000/svg"
-    private const val KVG_NS = "http://kanjivg.tagaini.net"
     private const val KVG_PREFIX = "kvg"
 
     private val TAG_SVG = QName("svg")
@@ -32,18 +30,18 @@ object KanjiSVGParser {
     private val ATTR_TRANSFORM = QName("transform")
     private val ATTR_PATH = QName("d")
 
-    private val ATTR_ELEMENT = QName(KVG_NS, "element", KVG_PREFIX)
-    private val ATTR_ORIGINAL = QName(KVG_NS, "original", KVG_PREFIX)
-    private val ATTR_POSITION = QName(KVG_NS, "position", KVG_PREFIX)
-    private val ATTR_VARIANT = QName(KVG_NS, "variant", KVG_PREFIX)
-    private val ATTR_PARTIAL = QName(KVG_NS, "partial", KVG_PREFIX)
-    private val ATTR_PART = QName(KVG_NS, "part", KVG_PREFIX)
-    private val ATTR_NUMBER = QName(KVG_NS, "number", KVG_PREFIX)
-    private val ATTR_RADICAL = QName(KVG_NS, "radical", KVG_PREFIX)
-    private val ATTR_PHON = QName(KVG_NS, "phon", KVG_PREFIX)
-    private val ATTR_TRAD_FORM = QName(KVG_NS, "tradForm", KVG_PREFIX)
-    private val ATTR_RADICAL_FORM = QName(KVG_NS, "radicalForm", KVG_PREFIX)
-    private val ATTR_TYPE = QName(KVG_NS, "type", KVG_PREFIX)
+    private val ATTR_ELEMENT = QName(null, "element", KVG_PREFIX)
+    private val ATTR_ORIGINAL = QName(null, "original", KVG_PREFIX)
+    private val ATTR_POSITION = QName(null, "position", KVG_PREFIX)
+    private val ATTR_VARIANT = QName(null, "variant", KVG_PREFIX)
+    private val ATTR_PARTIAL = QName(null, "partial", KVG_PREFIX)
+    private val ATTR_PART = QName(null, "part", KVG_PREFIX)
+    private val ATTR_NUMBER = QName(null, "number", KVG_PREFIX)
+    private val ATTR_RADICAL = QName(null, "radical", KVG_PREFIX)
+    private val ATTR_PHON = QName(null, "phon", KVG_PREFIX)
+    private val ATTR_TRAD_FORM = QName(null, "tradForm", KVG_PREFIX)
+    private val ATTR_RADICAL_FORM = QName(null, "radicalForm", KVG_PREFIX)
+    private val ATTR_TYPE = QName(null, "type", KVG_PREFIX)
 
     private val REGEX_MATRIX = Regex("^matrix(.*)$")
     private val REGEX_COMMA_OR_SPACE = Regex("[,\\s]+")
@@ -115,12 +113,20 @@ object KanjiSVGParser {
                 id = id(tag),
                 element = tag.attrString(ATTR_ELEMENT)?.let { Attr.KvgElement(it) },
                 original = tag.attrString(ATTR_ORIGINAL)?.let { Attr.KvgOriginal(it) },
-                position = tag.attrEnum(ATTR_POSITION, Attr.Position::class.java)?.let { Attr.KvgPosition(it) },
+                position = tag.attrEnum(
+                    ATTR_POSITION,
+                    Attr.Position.values(),
+                    { Attr.Position.fromString(it) }
+                )?.let { Attr.KvgPosition(it) },
                 variant = tag.attrBoolean(ATTR_VARIANT)?.let { Attr.KvgVariant(it) },
                 partial = tag.attrBoolean(ATTR_PARTIAL)?.let { Attr.KvgPartial(it) },
                 part = tag.attrInt(ATTR_PART)?.let { Attr.KvgPart(it) },
                 number = tag.attrInt(ATTR_NUMBER)?.let { Attr.KvgNumber(it) },
-                radical = tag.attrEnum(ATTR_RADICAL, Attr.Radical::class.java)?.let { Attr.KvgRadical(it) },
+                radical = tag.attrEnum(
+                    ATTR_RADICAL,
+                    Attr.Radical.values(),
+                    { Attr.Radical.fromString(it) }
+                )?.let { Attr.KvgRadical(it) },
                 phon = tag.attrString(ATTR_PHON)?.let { Attr.KvgPhon(it) },
                 tradForm = tag.attrString(ATTR_TRAD_FORM)?.let { Attr.KvgTradForm(it) },
                 radicalForm = tag.attrString(ATTR_RADICAL_FORM)?.let { Attr.KvgRadicalForm(it) },

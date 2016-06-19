@@ -208,8 +208,8 @@ internal fun StartElement.attrBoolean(name: QName): Boolean? = getAttributeByNam
 /**
  * Get an attribute value as an optional [Enum]
  */
-internal fun <E : Enum<E>> StartElement.attrEnum(name: QName, enumClass: Class<E>): E? =
-    getAttributeByName(name)?.toEnum(this, enumClass)
+internal fun <E : Enum<E>> StartElement.attrEnum(name: QName, values: Array<E>, fromString: (String) -> E): E? =
+    getAttributeByName(name)?.toEnum(this, values, fromString)
 
 /**
  * Convert an attribute value to [Int]
@@ -236,13 +236,12 @@ internal fun Attribute.toBoolean(context: StartElement): Boolean {
 /**
  * Convert an attribute value to [Enum]
  */
-internal fun <E : Enum<E>> Attribute.toEnum(context: StartElement, enumClass: Class<E>): E {
+internal fun <E : Enum<E>> Attribute.toEnum(context: StartElement, values: Array<E>, fromString: (String) -> E): E {
     try {
-        return java.lang.Enum.valueOf(enumClass, value)
+        return fromString(value)
     } catch (e: Exception) {
         throw ParsingException.InvalidAttributeFormat(
-            context, this,
-            "expected one of these enum values: ${enumClass.enumConstants}", e
+            context, this, "expected one of these enum values: $values", e
         )
     }
 }

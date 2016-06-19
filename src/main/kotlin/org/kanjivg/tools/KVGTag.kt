@@ -116,11 +116,25 @@ sealed class KVGTag(open val name: String) {
             LEFT("left"), RIGHT("right"),
             TOP("top"), BOTTOM("bottom"),
             NYO("nyo"), TARE("tare"),
-            KAMAE("kamae"), KAMAE1("kamae1"), KAMAE2("kamae2")
+            KAMAE("kamae"), KAMAE1("kamae1"), KAMAE2("kamae2");
+
+            companion object {
+                fun fromString(s: String): Position {
+                    return values().find { it.value == s } ?:
+                        throw IllegalArgumentException("Value $s is not one of: ${values()}")
+                }
+            }
         }
 
         enum class Radical(val value: String) {
-            GENERAL("general"), NELSON("nelson"), TRADITIONAL("tradit")
+            GENERAL("general"), NELSON("nelson"), TRADITIONAL("tradit");
+
+            companion object {
+                fun fromString(s: String): Radical {
+                    return values().find { it.value == s } ?:
+                        throw IllegalArgumentException("Value $s is not one of: ${values()}")
+                }
+            }
         }
     }
 }
