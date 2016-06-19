@@ -14,7 +14,10 @@ object NumberPositions : Validation(
             val path = stroke.path.value
             val matcher = PATH_START.matcher(path)
             if ( ! matcher.find()) {
-                return ValidationResult.Failed("Path '$path' has invalid starting segment: must start with Move-to (absolute)")
+                return ValidationResult.Error(
+                    "Path '$path' has invalid starting segment: " +
+                        "must start with absolute 'moveto' instruction (capital 'M')"
+                )
             }
             Pair(
                 matcher.group("x").toDouble(),

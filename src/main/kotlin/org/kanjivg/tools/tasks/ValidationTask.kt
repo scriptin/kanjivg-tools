@@ -32,7 +32,7 @@ object ValidationTask : Task() {
             val fileId = file.nameWithoutExtension
             val svg = parse(file, xmlInputFactory)
             val validationResults = validations.map { Pair(it.name, it.validate(fileId, svg)) }.toMap()
-            val failedValidations = validationResults.filter { it.value is ValidationResult.Failed }
+            val failedValidations = validationResults.filter { it.value !is ValidationResult.Passed }
             if (failedValidations.isEmpty()) {
                 logger.info("ALL VALIDATIONS PASSED: {}", file.name)
             } else {
