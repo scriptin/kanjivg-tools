@@ -14,10 +14,11 @@ object RepairIdsTask : Task() {
         val files = getFiles(kvgDir, fileNameFilters)
         val xmlInputFactory = createXMLInputFactory()
         files.forEach { file ->
-            val fileId = file.nameWithoutExtension
             val eventReader = xmlInputFactory.createXMLEventReader(FileReader(file))
             try {
                 val svg = KanjiSVGParser.parse(eventReader)
+                val fileId = file.nameWithoutExtension
+                val kanji = svg.strokePathsGroup.rootGroup.element?.value ?: "NA"
                 val thingsToRepair = ThingsToRepair(
                     StrokeRootGroupId.validate(fileId, svg) is ValidationResult.Failed,
                     NumberRootGroupId.validate(fileId, svg) is ValidationResult.Failed,
@@ -25,7 +26,7 @@ object RepairIdsTask : Task() {
                     StrokeIds.validate(fileId, svg) is ValidationResult.Failed
                 )
                 if (thingsToRepair.needsRepair()) {
-                    logger.warn("Repairing IDs in {}, overwriting a file", fileId)
+                    logger.warn("Repairing IDs in {}/{}, overwriting a file", kanji, file.name)
                     val contents = String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)
                     val repairedContents = repairXml(
                         xmlInputFactory.createXMLEventReader(FileReader(file)),
@@ -35,7 +36,7 @@ object RepairIdsTask : Task() {
                     )
                     file.writeBytes(repairedContents.toByteArray(StandardCharsets.UTF_8))
                 } else {
-                    logger.info("No changes required in {}", fileId)
+                    logger.info("No changes required in {}/{}", kanji, file.name)
                 }
             } finally {
                 eventReader.close()

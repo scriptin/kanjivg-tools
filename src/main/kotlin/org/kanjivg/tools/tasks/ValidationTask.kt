@@ -29,15 +29,16 @@ object ValidationTask : Task() {
         val xmlInputFactory = createXMLInputFactory()
         printValidationsInfo()
         files.forEach { file ->
-            val fileId = file.nameWithoutExtension
             val svg = parse(file, xmlInputFactory)
+            val fileId = file.nameWithoutExtension
+            val kanji = svg.strokePathsGroup.rootGroup.element?.value ?: "NA"
             val validationResults = validations.map { Pair(it.name, it.validate(fileId, svg)) }.toMap()
             val failedValidations = validationResults.filter { it.value !is ValidationResult.Passed }
             if (failedValidations.isEmpty()) {
-                logger.info("ALL VALIDATIONS PASSED: {}", file.name)
+                logger.info("ALL VALIDATIONS PASSED: {}/{}", kanji, file.name)
             } else {
                 logger.warn(
-                    "SOME VALIDATIONS FAILED: {}\n{}\n", file.name,
+                    "SOME VALIDATIONS FAILED: {}/{}\n{}\n", kanji, file.name,
                     failedValidations.map { "  - ${it.key}: ${it.value}" }.joinToString("\n")
                 )
             }
