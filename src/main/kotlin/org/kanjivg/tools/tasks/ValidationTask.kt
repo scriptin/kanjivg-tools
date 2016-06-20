@@ -1,37 +1,22 @@
 package org.kanjivg.tools.tasks
 
 import org.kanjivg.tools.tasks.config.FilesConfig
+import org.kanjivg.tools.tasks.config.ValidationsConfig
 import org.kanjivg.tools.validation.*
 
 object ValidationTask : Task() {
     /**
-     * List of available validations.
-     * TODO: make it configurable with application.conf and command-line arguments
-     */
-    private final val validations = listOf(
-        WidthAndHeight,
-        ViewBox,
-        StrokeRootGroupId,
-        StrokeRootGroupStyle,
-        StrokeGroupsIds,
-        StrokeIds,
-        NumberRootGroupId,
-        NumberRootGroupStyle,
-        StrokeNumbersCount,
-        NumberOrder,
-        NumberPositions
-    )
-
-    /**
      * Entry point for parsing and validation
      */
-    fun validate(filesConfig: FilesConfig): Unit {
-        printValidationsInfo()
+    fun validate(filesConfig: FilesConfig, validationsConfig: ValidationsConfig): Unit {
+        printValidationsInfo(validationsConfig.enabledValidations)
         filesConfig.getFiles().forEach { file ->
             val svg = parse(file)
             val fileId = file.nameWithoutExtension
             val kanji = svg.strokePathsGroup.rootGroup.element?.value ?: "NA"
-            val validationResults = validations.map { Pair(it.name, it.validate(fileId, svg)) }.toMap()
+            val validationResults = validationsConfig.enabledValidations.map { validation ->
+                Pair(validation.name, validation.validate(fileId, svg))
+            }.toMap()
             val failedValidations = validationResults.filter { it.value !is ValidationResult.Passed }
             if (failedValidations.isEmpty()) {
                 logger.info("ALL VALIDATIONS PASSED: {}/{}", kanji, file.name)
@@ -44,9 +29,9 @@ object ValidationTask : Task() {
         }
     }
 
-    private fun printValidationsInfo() {
+    private fun printValidationsInfo(enabledValidations: List<Validation>) {
         val newLine = "\n  "
-        val info = validations.map { "${it.name}: ${it.description}" }.joinToString(newLine)
+        val info = enabledValidations.map { "${it.name}: ${it.description}" }.joinToString(newLine)
         logger.info("Enabled validations:$newLine$info")
     }
 }

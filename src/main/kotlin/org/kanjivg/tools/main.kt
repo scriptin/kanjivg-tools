@@ -5,6 +5,7 @@ import org.kanjivg.tools.tasks.RepairIdsTask
 import org.kanjivg.tools.tasks.TaskType
 import org.kanjivg.tools.tasks.ValidationTask
 import org.kanjivg.tools.tasks.config.FilesConfig
+import org.kanjivg.tools.tasks.config.ValidationsConfig
 import org.slf4j.LoggerFactory
 
 fun main(args: Array<String>) {
@@ -26,7 +27,8 @@ fun main(args: Array<String>) {
     when (task) {
         TaskType.VALIDATE -> {
             ValidationTask.validate(
-                FilesConfig(kanjiVGDir, config.getConfig("${task.name.toLowerCase()}.files"))
+                FilesConfig(kanjiVGDir, config.getConfig("${task.name.toLowerCase()}.files")),
+                ValidationsConfig(config.getConfig("${task.name.toLowerCase()}.validations"))
             )
         }
         TaskType.REPAIR_IDS -> {
