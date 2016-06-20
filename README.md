@@ -54,7 +54,7 @@ Arguments:
 - `-Dvalidate.validations.enabled=all` - enabled validations:
     - `all` (default) - all available validations
     - comma-separated list of case-sensitive names of validations from
-      [org.kanjivg.tools.validation](tree/master/src/main/kotlin/org/kanjivg/tools/validation) package:
+      [org.kanjivg.tools.validation](src/main/kotlin/org/kanjivg/tools/validation) package:
         - `WidthAndHeight`
         - `ViewBox`
         - `StrokeRootGroupId`
