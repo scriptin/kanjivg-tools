@@ -1,6 +1,7 @@
 package org.kanjivg.tools.tasks
 
 import org.kanjivg.tools.parsing.KanjiSVGParser
+import org.kanjivg.tools.tasks.config.FilesConfig
 import org.kanjivg.tools.validation.*
 import java.io.*
 import java.nio.charset.StandardCharsets
@@ -10,10 +11,9 @@ import javax.xml.stream.XMLEventReader
 import javax.xml.stream.events.StartElement
 
 object RepairIdsTask : Task() {
-    fun repairIds(kvgDir: String, fileNameFilters: List<String>): Unit {
-        val files = getFiles(kvgDir, fileNameFilters)
+    fun repairIds(filesConfig: FilesConfig): Unit {
         val xmlInputFactory = createXMLInputFactory()
-        files.forEach { file ->
+        filesConfig.getFiles().forEach { file ->
             val eventReader = xmlInputFactory.createXMLEventReader(FileReader(file))
             try {
                 val svg = KanjiSVGParser.parse(eventReader)

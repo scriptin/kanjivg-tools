@@ -8,7 +8,7 @@ It consists of:
 
 - Parser for SVG files from KanjiVG
 - Various validations of those SVG files
-- (TODO) Transformation and fixing utilities for SVG files
+- Transformation and fixing utilities for SVG files
 
 Building
 --------
@@ -43,17 +43,19 @@ Arguments:
 
 ### `validate` task arguments:
 
-- `-Dvalidate.files=*` - list of glob-like patterns to filter files by their names w/o '.svg' extension,
+- `-Dvalidate.files.included=*` - list of glob-like patterns to filter files by their names w/o '.svg' extension,
   where `*` denotes any number of any characters
   Examples:
-    - `-Dvalidate.files=*` (default) - matches all files
-    - `-Dvalidate.files=01a2b` - matches a single file `01a2b.svg`
-    - `-Dvalidate.files=01a2b*` - matches `01a2b.svg`, `01a2b-Kaisho.svg`, etc.
-    - `-Dvalidate.files=01a2b,03c4d,05e6f` - matches `01a2b.svg`, `03c4d.svg`, `05e6f.svg`
+    - `-Dvalidate.files.included=*` (default) - matches all files
+    - `-Dvalidate.files.included=01a2b` - matches a single file `01a2b.svg`
+    - `-Dvalidate.files.included=01a2b*` - matches `01a2b.svg`, `01a2b-Kaisho.svg`, etc.
+    - `-Dvalidate.files.included=01a2b,03c4d,05e6f` - matches `01a2b.svg`, `03c4d.svg`, `05e6f.svg`
+- `-Dvalidate.files.excluded` - similar to previous, but for exclusions, `null` by default. Exclusions are applied *after* inclusions
 
 ### `repair_ids` task arguments:
 
-- `-Drepair_ids.files=*` - same as in the `validate` task
+- `-Drepair_ids.files.included=*` - same as in the `validate` task
+- `-Drepair_ids.files.excluded=*` - same as in the `validate` task
 
 License
 -------

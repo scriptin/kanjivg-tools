@@ -1,5 +1,6 @@
 package org.kanjivg.tools.tasks
 
+import org.kanjivg.tools.tasks.config.FilesConfig
 import org.kanjivg.tools.validation.*
 
 object ValidationTask : Task() {
@@ -24,11 +25,10 @@ object ValidationTask : Task() {
     /**
      * Entry point for parsing and validation
      */
-    fun validate(kvgDir: String, fileNameFilters: List<String>): Unit {
-        val files = getFiles(kvgDir, fileNameFilters)
+    fun validate(filesConfig: FilesConfig): Unit {
         val xmlInputFactory = createXMLInputFactory()
         printValidationsInfo()
-        files.forEach { file ->
+        filesConfig.getFiles().forEach { file ->
             val svg = parse(file, xmlInputFactory)
             val fileId = file.nameWithoutExtension
             val kanji = svg.strokePathsGroup.rootGroup.element?.value ?: "NA"

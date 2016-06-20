@@ -4,6 +4,7 @@ import com.typesafe.config.ConfigFactory
 import org.kanjivg.tools.tasks.RepairIdsTask
 import org.kanjivg.tools.tasks.TaskType
 import org.kanjivg.tools.tasks.ValidationTask
+import org.kanjivg.tools.tasks.config.FilesConfig
 import org.slf4j.LoggerFactory
 
 fun main(args: Array<String>) {
@@ -21,14 +22,17 @@ fun main(args: Array<String>) {
     }
     logger.info(frame("task: ${task.name}"))
     val kanjiVGDir = config.getString("kanjivg.dir")
+    logger.info("KanjiVG directory: {}", kanjiVGDir)
     when (task) {
         TaskType.VALIDATE -> {
-            val fileNameFilters = config.getString("${TaskType.VALIDATE.name.toLowerCase()}.files").split(",")
-            ValidationTask.validate(kanjiVGDir, fileNameFilters)
+            ValidationTask.validate(
+                FilesConfig(kanjiVGDir, config.getConfig("${task.name.toLowerCase()}.files"))
+            )
         }
         TaskType.REPAIR_IDS -> {
-            val fileNameFilters = config.getString("${TaskType.REPAIR_IDS.name.toLowerCase()}.files").split(",")
-            RepairIdsTask.repairIds(kanjiVGDir, fileNameFilters)
+            RepairIdsTask.repairIds(
+                FilesConfig(kanjiVGDir, config.getConfig("${task.name.toLowerCase()}.files"))
+            )
         }
     }
 }

@@ -27,35 +27,6 @@ abstract class Task {
     }
 
     /**
-     * Get filtered list of files from given directory
-     */
-    protected fun getFiles(dir: String, filters: List<String>): List<File> {
-        logger.info("Scanning KanjiVG directory: {}", dir)
-        logger.info("Using filters: $filters")
-        val regexFilters = prepareFilters(filters)
-        val files: List<File> = File(dir).walk()
-            .onFail { file, ioException ->
-                throw RuntimeException("Error processing a file '$file'", ioException)
-            }
-            .filter { it.isFile }
-            .filter { file ->
-                regexFilters.indexOfFirst { flt -> flt.matches(file.nameWithoutExtension) } >= 0
-            }
-            .toList()
-        logger.info("Found {} files matching filters", files.size)
-        return files
-    }
-
-    /**
-     * Escape filter strings: '*' becomes '.*', everything else is treated as literal
-     */
-    private fun prepareFilters(filters: List<String>): List<Regex> {
-        return filters.map { filter ->
-            Regex(filter.split("*").map { Regex.escape(it) }.joinToString(".*"))
-        }
-    }
-
-    /**
      * Create new instance of [XMLInputFactory]
      */
     protected fun createXMLInputFactory(): XMLInputFactory {
