@@ -26,10 +26,9 @@ object ValidationTask : Task() {
      * Entry point for parsing and validation
      */
     fun validate(filesConfig: FilesConfig): Unit {
-        val xmlInputFactory = createXMLInputFactory()
         printValidationsInfo()
         filesConfig.getFiles().forEach { file ->
-            val svg = parse(file, xmlInputFactory)
+            val svg = parse(file)
             val fileId = file.nameWithoutExtension
             val kanji = svg.strokePathsGroup.rootGroup.element?.value ?: "NA"
             val validationResults = validations.map { Pair(it.name, it.validate(fileId, svg)) }.toMap()

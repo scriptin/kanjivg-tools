@@ -12,11 +12,12 @@ import javax.xml.stream.XMLInputFactory
  */
 abstract class Task {
     protected final val logger = LoggerFactory.getLogger(javaClass)
+    protected final val xmlInputFactory = createXMLInputFactory()
 
     /**
-     * Parse a file into object
+     * Create a domain object from a given file's contents
      */
-    protected fun parse(file: File, xmlInputFactory: XMLInputFactory): KVGTag.SVG {
+    protected fun parse(file: File): KVGTag.SVG {
         logger.info("PARSING: {}", file.name)
         val eventReader = xmlInputFactory.createXMLEventReader(FileReader(file))
         try {
@@ -26,10 +27,7 @@ abstract class Task {
         }
     }
 
-    /**
-     * Create new instance of [XMLInputFactory]
-     */
-    protected fun createXMLInputFactory(): XMLInputFactory {
+    private fun createXMLInputFactory(): XMLInputFactory {
         val xmlInputFactory = XMLInputFactory.newInstance()
         // 'kvg:' prefix causes error if namespace awareness is on
         xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false)
