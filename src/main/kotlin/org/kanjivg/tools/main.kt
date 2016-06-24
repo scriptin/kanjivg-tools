@@ -32,7 +32,7 @@ fun main(args: Array<String>) {
             )
         }
         TaskType.REPAIR_IDS -> {
-            RepairIdsTask.repairIds(
+            RepairIdsTask.repair(
                 FilesConfig(kanjiVGDir, config.getConfig("${task.name.toLowerCase()}.files"))
             )
         }
