@@ -10,7 +10,7 @@ object NumberPositions : Validation(
     private final val PATH_START = Regex("^\\s*M\\s*(?<x>$NUMBER_PATTERN)[\\s,]*(?<y>$NUMBER_PATTERN)").toPattern()
 
     override fun validate(fileId: String, svg: KVGTag.SVG): ValidationResult {
-        val strokeStartingPoints = getStrokes(svg.strokePathsGroup.rootGroup).map { stroke ->
+        val strokeStartingPoints = KVGTag.getStrokes(svg.strokePathsGroup.rootGroup).map { stroke ->
             val path = stroke.path.value
             val matcher = PATH_START.matcher(path)
             if ( ! matcher.find()) {

@@ -8,5 +8,5 @@ object StrokeIds : IdsValidation(
 ) {
     override fun suffix(idx: Int): String = "-s${idx + 1}"
 
-    override fun getIds(group: KVGTag.StrokePathsSubGroup): List<String> = getStrokes(group).map { it.id.value }
+    override fun getIds(group: KVGTag.StrokePathsSubGroup): List<String> = KVGTag.getStrokes(group).map { it.id.value }
 }
