@@ -153,5 +153,20 @@ sealed class KVGTag(open val name: String) {
             }
             return strokes
         }
+
+        /**
+         * Get a flat list of groups
+         */
+        fun getGroups(group: KVGTag.StrokePathsSubGroup): List<KVGTag.StrokePathsSubGroup> {
+            val groups = mutableListOf(group)
+            group.children.forEach { child ->
+                when (child) {
+                    is KVGTag.StrokePathsSubGroup -> groups.addAll(getGroups(child))
+                    is KVGTag.Path -> {}
+                    else -> throw IllegalStateException("Found a child of type ${child.javaClass.name} inside stroke group")
+                }
+            }
+            return groups
+        }
     }
 }

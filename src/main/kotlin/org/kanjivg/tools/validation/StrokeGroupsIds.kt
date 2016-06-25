@@ -8,15 +8,5 @@ object StrokeGroupsIds : IdsValidation(
 ) {
     override fun suffix(idx: Int): String = if (idx == 0) "" else "-g$idx"
 
-    override fun getIds(group: KVGTag.StrokePathsSubGroup): List<String> {
-        val ids = mutableListOf(group.id.value)
-        group.children.forEach { child ->
-            when (child) {
-                is KVGTag.StrokePathsSubGroup -> ids.addAll(getIds(child))
-                is KVGTag.Path -> {}
-                else -> throw IllegalStateException("Found a child of type ${child.javaClass.name} inside stroke group")
-            }
-        }
-        return ids
-    }
+    override fun getIds(group: KVGTag.StrokePathsSubGroup): List<String> = KVGTag.getGroups(group).map { it.id.value }
 }
