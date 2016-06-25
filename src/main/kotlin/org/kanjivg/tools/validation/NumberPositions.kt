@@ -7,7 +7,7 @@ object NumberPositions : Validation(
     "numbers must be placed near starting points of their corresponding strokes"
 ) {
     private const val NUMBER_PATTERN = "[-+]?([0-9]*\\.)?[0-9]+([eE][-+]?[0-9]+)?"
-    private final val PATH_START = Regex("^\\s*M\\s*(?<x>$NUMBER_PATTERN)[\\s,]*(?<y>$NUMBER_PATTERN)").toPattern()
+    private final val PATH_START = Regex("^\\s*[Mm]\\s*(?<x>$NUMBER_PATTERN)[\\s,]*(?<y>$NUMBER_PATTERN)").toPattern()
 
     override fun validate(fileId: String, svg: KVGTag.SVG): ValidationResult {
         val strokeStartingPoints = KVGTag.getStrokes(svg.strokePathsGroup.rootGroup).map { stroke ->
@@ -15,8 +15,7 @@ object NumberPositions : Validation(
             val matcher = PATH_START.matcher(path)
             if ( ! matcher.find()) {
                 return ValidationResult.Error(
-                    "Path '$path' has invalid starting segment: " +
-                        "must start with absolute 'moveto' instruction (capital 'M')"
+                    "Path '$path' has invalid starting segment: must start with a 'move-to' instruction"
                 )
             }
             Pair(
