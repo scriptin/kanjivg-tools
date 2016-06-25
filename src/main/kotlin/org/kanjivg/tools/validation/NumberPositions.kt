@@ -2,11 +2,11 @@ package org.kanjivg.tools.validation
 
 import org.kanjivg.tools.KVGTag
 
-object NumberPositions : Validation(
+class NumberPositions(val maxDistance: Double) : Validation(
     "number positions",
     "numbers must be placed near starting points of their corresponding strokes"
 ) {
-    private const val NUMBER_PATTERN = "[-+]?([0-9]*\\.)?[0-9]+([eE][-+]?[0-9]+)?"
+    private final val NUMBER_PATTERN = "[-+]?([0-9]*\\.)?[0-9]+([eE][-+]?[0-9]+)?"
     private final val PATH_START = Regex("^\\s*[Mm]\\s*(?<x>$NUMBER_PATTERN)[\\s,]*(?<y>$NUMBER_PATTERN)").toPattern()
 
     override fun validate(fileId: String, svg: KVGTag.SVG): ValidationResult {
@@ -30,17 +30,15 @@ object NumberPositions : Validation(
         val distances = numberPositions.mapIndexed { idx, pos ->
             distance(pos, strokeStartingPoints[idx])
         }
-        return if (distances.all { it <= MAX_DISTANCE }) {
+        return if (distances.all { it <= maxDistance }) {
             ValidationResult.Passed
         } else {
             ValidationResult.Failed(
                 "Distances b/w stroke starting points and their corresponding numbers: $distances. " +
-                    "Maximum allowed distance is $MAX_DISTANCE"
+                    "Maximum allowed distance is $maxDistance"
             )
         }
     }
-
-    private const val MAX_DISTANCE = 25.0
 
     private fun distance(a: Pair<Double, Double>, b: Pair<Double, Double>): Double {
         return Math.sqrt(

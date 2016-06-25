@@ -28,7 +28,7 @@ fun main(args: Array<String>) {
         TaskType.VALIDATE -> {
             ValidationTask.validate(
                 FilesConfig(kanjiVGDir, config.getConfig("${task.name.toLowerCase()}.files")),
-                ValidationsConfig(config.getConfig("${task.name.toLowerCase()}.validations"))
+                ValidationsConfig(config.getConfig("validations"))
             )
         }
         TaskType.REPAIR_IDS -> {

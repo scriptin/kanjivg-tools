@@ -7,22 +7,23 @@ import org.kanjivg.tools.validation.*
  * Wrapper for configuration of validations
  */
 class ValidationsConfig {
-    final val allValidations = listOf(
-        WidthAndHeight,
-        ViewBox,
-        StrokeRootGroupId,
-        StrokeRootGroupStyle,
-        StrokeGroupsIds,
-        StrokeIds,
-        NumberRootGroupId,
-        NumberRootGroupStyle,
-        StrokeNumbersCount,
-        NumberOrder,
-        NumberPositions
-    )
+    final val allValidations: List<Validation>
     final val enabledValidations: List<Validation>
 
     constructor(config: Config) {
+        allValidations = listOf(
+            WidthAndHeight,
+            ViewBox,
+            StrokeRootGroupId,
+            StrokeRootGroupStyle,
+            StrokeGroupsIds,
+            StrokeIds,
+            NumberRootGroupId,
+            NumberRootGroupStyle,
+            StrokeNumbersCount,
+            NumberOrder,
+            NumberPositions(config.getDouble("NumberPositions.maxDistance"))
+        )
         val enabledString = config.getString("enabled")
         if (enabledString.toLowerCase() == "all") {
             enabledValidations = allValidations

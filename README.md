@@ -51,7 +51,7 @@ Arguments:
     - `-Dvalidate.files.included=01a2b*` - matches `01a2b.svg`, `01a2b-Kaisho.svg`, etc.
     - `-Dvalidate.files.included=01a2b,03c4d,05e6f` - matches `01a2b.svg`, `03c4d.svg`, `05e6f.svg`
 - `-Dvalidate.files.excluded` - similar to previous, but for exclusions, `null` by default. Exclusions are applied *after* inclusions
-- `-Dvalidate.validations.enabled=all` - enabled validations:
+- `-Dvalidations.enabled=all` - enabled validations:
     - `all` (default) - all available validations
     - comma-separated list of case-sensitive names of validations from
       [org.kanjivg.tools.validation](src/main/kotlin/org/kanjivg/tools/validation) package:
@@ -67,6 +67,10 @@ Arguments:
         - `NumberOrder`
         - `NumberPositions`
         - (this list may be outdated, please refer to the source code)
+
+Parameters of validations:
+
+- `Dvalidations.NumberPositions.maxDistance=25.0` - max. allowed distance b/w stroke starting point and corresponding stroke number
 
 ### `repair_ids` task arguments:
 
