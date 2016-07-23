@@ -7,8 +7,8 @@ import org.kanjivg.tools.validation.*
  * Wrapper for configuration of validations
  */
 class ValidationsConfig {
-    final val allValidations: List<Validation>
-    final val enabledValidations: List<Validation>
+    val allValidations: List<Validation>
+    val enabledValidations: List<Validation>
 
     constructor(config: Config) {
         allValidations = listOf(
