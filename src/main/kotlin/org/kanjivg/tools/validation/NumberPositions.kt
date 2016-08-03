@@ -35,9 +35,12 @@ class NumberPositions(val maxDistance: Double) : Validation(
         } else {
             val tooFar = distances.mapIndexed { ind, dist -> Pair(ind, dist) }
                 .filter { it.second > maxDistance }
-                .map { "stroke ${it.first + 1} has distance ${(it.second * 100).toInt().toDouble() / 100.00}" }
+                .map { "${it.first + 1} has distance ${(it.second * 100).toInt().toDouble() / 100.00}" }
                 .joinToString("; ")
-            ValidationResult.Failed("$tooFar. Maximum allowed distance is $maxDistance")
+            ValidationResult.Failed(
+                "These number are too far from starting points of their strokes: $tooFar. " +
+                    "Maximum allowed distance is $maxDistance"
+            )
         }
     }
 
